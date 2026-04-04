@@ -151,7 +151,7 @@
       "name": "Groq Chat Model1",
       "credentials": {
         "groqApi": {
-          "id": "NWZI7vl0KX5t4ntQ",
+          "id": "YOUR_CREDENTIALS_ID",
           "name": "Groq account"
         }
       }
