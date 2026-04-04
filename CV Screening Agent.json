@@ -1,0 +1,562 @@
+{
+  "name": "CV Screening Agent",
+  "nodes": [
+    {
+      "parameters": {
+        "formTitle": "Resume Submission Form",
+        "formFields": {
+          "values": [
+            {
+              "fieldLabel": "NAME",
+              "placeholder": "Text"
+            },
+            {
+              "fieldLabel": "AGE",
+              "fieldType": "number",
+              "placeholder": "Number"
+            },
+            {
+              "fieldLabel": "EMAIL",
+              "fieldType": "email",
+              "placeholder": "Valid email"
+            },
+            {
+              "fieldLabel": "RESUME",
+              "fieldType": "file"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.formTrigger",
+      "typeVersion": 2.5,
+      "position": [
+        0,
+        -576
+      ],
+      "id": "eba3a578-d080-4d39-8081-dee6d3c21461",
+      "name": "On form submission",
+      "webhookId": "1f0606e2-518c-4f98-ab33-eec7c608840b"
+    },
+    {
+      "parameters": {
+        "sendTo": "={{ $('On form submission').item.json.EMAIL }}",
+        "subject": "Your Form Has Been Successfully Submitted",
+        "emailType": "text",
+        "message": "=Dear {{ $('On form submission').item.json.NAME }},\n\nThank you for submitting your form. We have successfully received your information.\n\nOur team will review your submission and keep you informed about the next steps. If any additional details are required, we will reach out to you.\n\nWe appreciate your time and interest.\n\nBest regards,\nCompany Name",
+        "options": {
+          "appendAttribution": false
+        }
+      },
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2.2,
+      "position": [
+        224,
+        -480
+      ],
+      "id": "7092d712-cd7f-45e7-bac8-e810ba595c90",
+      "name": "Send a message",
+      "webhookId": "b3827212-916c-458b-b6aa-92c7abbcdd7b",
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "YOUR_ID",
+          "name": "Gmail OAuth2 API"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "=You are a strict CV screening system for a Software Engineer position.\n\nYour task is to evaluate how well the candidate matches this role.\n\nReturn ONLY a number between 0 and 100.\n\nRules:\n- Output ONLY the number\n- No explanation\n- No text\n- No symbols\n- No JSON\n\nEvaluation Criteria:\n1. Programming skills (especially relevant languages like Python, JavaScript, Java, C++) – 30%\n2. Frameworks & technologies (e.g., React, Node.js, databases, backend systems) – 25%\n3. Projects & real-world experience (production apps, scalability, complexity) – 25%\n4. Computer Science fundamentals (algorithms, systems, problem solving) – 10%\n5. Education & achievements – 10%\n\nScoring Guide:\n- 90–100: Excellent Software Engineer candidate (job-ready)\n- 75–89: Strong candidate\n- 60–74: (average, may need training)\n- Below 60: Weak fit\n\nNow evaluate this CV:\n\n{{ $json.text }}",
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 3.1,
+      "position": [
+        448,
+        -672
+      ],
+      "id": "8b688cca-2a01-4ad6-84a1-acb19ec2758f",
+      "name": "AI Agent"
+    },
+    {
+      "parameters": {
+        "model": "llama-3.1-8b-instant",
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatGroq",
+      "typeVersion": 1,
+      "position": [
+        520,
+        -448
+      ],
+      "id": "e95f6ba2-0052-4be6-bc33-8bbbd70d3185",
+      "name": "Groq Chat Model",
+      "credentials": {
+        "groqApi": {
+          "id": "YOUR_GROQ_ID",
+          "name": "Groq account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "pdf",
+        "binaryPropertyName": "=RESUME",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.extractFromFile",
+      "typeVersion": 1.1,
+      "position": [
+        224,
+        -672
+      ],
+      "id": "63f5dc06-ddfc-4697-84da-15784936d696",
+      "name": "Extract from File"
+    },
+    {
+      "parameters": {
+        "jsCode": "return items.map(item => {\n  return {\n    json: {\n      score: Number(item.json.output)\n    }\n  };\n});"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        800,
+        -672
+      ],
+      "id": "075b86cd-ce1a-4c86-9921-b0336ec72b89",
+      "name": "Code in JavaScript"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 3
+          },
+          "conditions": [
+            {
+              "id": "d868710d-5d6a-48f1-8708-d34f5c3a70f9",
+              "leftValue": "={{ $json.score }}",
+              "rightValue": 60,
+              "operator": {
+                "type": "number",
+                "operation": "gte"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [
+        1024,
+        -672
+      ],
+      "id": "2811965b-2591-4330-8b87-9a37942f4301",
+      "name": "If"
+    },
+    {
+      "parameters": {
+        "operation": "append",
+        "documentId": {
+          "__rl": true,
+          "value": "1QaZnLVHy5m5qtHUT_Kq839seCAacH-uLIko2bpfJMZw",
+          "mode": "list",
+          "cachedResultName": "YOUR_SHEET_NAME",
+          "cachedResultUrl": "YOUR_SHEET_URL"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "gid=0",
+          "mode": "list",
+          "cachedResultName": "YOUR_SHEET_NAME",
+          "cachedResultUrl": "YOUR_SHEET_URL"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "SCORE": "={{ $json.score }}",
+            "NAME": "={{ $('On form submission').item.json.NAME }}",
+            "AGE": "={{ $('On form submission').item.json.AGE }}",
+            "EMAIL": "={{ $('On form submission').item.json.EMAIL }}",
+            "CV": "={{ $('On form submission').item.json.RESUME[0].filename }}"
+          },
+          "matchingColumns": [],
+          "schema": [
+            {
+              "id": "NAME",
+              "displayName": "NAME",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "AGE",
+              "displayName": "AGE",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "EMAIL",
+              "displayName": "EMAIL",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "SCORE",
+              "displayName": "SCORE",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "CV",
+              "displayName": "CV",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Questions",
+              "displayName": "Questions",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": true
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.7,
+      "position": [
+        1248,
+        -672
+      ],
+      "id": "1b5b69ba-77a4-4e54-bd24-aa55c7065adf",
+      "name": "Append row in sheet",
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "YOUR_ID",
+          "name": "Google Sheets OAuth2 API"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "=You are a technical interviewer hiring for a Software Engineer position.\n\nYour task is to generate 5 highly relevant and tailored interview questions based on the candidate’s CV.\n\nRules:\n- Questions MUST be specific to the candidate’s skills, projects, or experience\n- Do NOT ask generic questions (e.g., \"Tell me about yourself\")\n- Focus on technical depth, real-world problem solving, and decision-making\n- At least 3 questions must be technical\n- At least 1 question should challenge a project mentioned in the CV\n- Questions should assess actual skill, not theory only\n\nOutput format:\n- Return ONLY a numbered list (1 to 5)\n- No explanations\n- No extra text\n\nNow generate questions based on this CV:\n\n{{ $('Extract from File').item.json.text }}",
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 3.1,
+      "position": [
+        1472,
+        -672
+      ],
+      "id": "7b41b771-0432-48fd-961c-c88d6e56256e",
+      "name": "AI Agent1"
+    },
+    {
+      "parameters": {
+        "model": "llama-3.1-8b-instant",
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatGroq",
+      "typeVersion": 1,
+      "position": [
+        1544,
+        -448
+      ],
+      "id": "fc9c4f81-52a3-4139-8739-cb4ea1c179af",
+      "name": "Groq Chat Model1",
+      "credentials": {
+        "groqApi": {
+          "id": "YOUR_GROQ_ID",
+          "name": "Groq account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "return items.map(item => {\n  // Get the AI output\n  const questions = item.json.output;\n\n  // Replace actual line breaks with a single space or \\n for Google Sheets\n  const formatted = questions.replace(/\\n/g, \" | \"); // You can use \" ; \" or \"\\n\" if Google Sheets supports it\n\n  return {\n    json: {\n      Questions: formatted\n    }\n  };\n});"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1824,
+        -672
+      ],
+      "id": "6bd8da1c-fff8-4371-9dcf-99c164bb147d",
+      "name": "Code in JavaScript1"
+    },
+    {
+      "parameters": {
+        "operation": "append",
+        "documentId": {
+          "__rl": true,
+          "value": "1QaZnLVHy5m5qtHUT_Kq839seCAacH-uLIko2bpfJMZw",
+          "mode": "list",
+          "cachedResultName": "YOUR_SHEET_NAME",
+          "cachedResultUrl": "YOUR_SHEET_URL"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "gid=0",
+          "mode": "list",
+          "cachedResultName": "YOUR_SHEET_NAME",
+          "cachedResultUrl": "YOUR_SHEET_URL"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "Questions": "={{ $json.Questions }}"
+          },
+          "matchingColumns": [],
+          "schema": [
+            {
+              "id": "NAME",
+              "displayName": "NAME",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": true
+            },
+            {
+              "id": "AGE",
+              "displayName": "AGE",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": true
+            },
+            {
+              "id": "EMAIL",
+              "displayName": "EMAIL",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": true
+            },
+            {
+              "id": "SCORE",
+              "displayName": "SCORE",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": true
+            },
+            {
+              "id": "CV",
+              "displayName": "CV",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": true
+            },
+            {
+              "id": "Questions",
+              "displayName": "Questions",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.7,
+      "position": [
+        2048,
+        -672
+      ],
+      "id": "4f19c885-5d9b-4982-b820-a26469a16025",
+      "name": "Append row in sheet1",
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "YOUR_ID",
+          "name": "Google Sheets OAuth2 API"
+        }
+      }
+    }
+  ],
+  "pinData": {
+    "AI Agent": [
+      {
+        "json": {
+          "output": "85"
+        },
+        "pairedItem": {
+          "item": 0
+        }
+      }
+    ]
+  },
+  "connections": {
+    "On form submission": {
+      "main": [
+        [
+          {
+            "node": "Send a message",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Extract from File",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "AI Agent": {
+      "main": [
+        [
+          {
+            "node": "Code in JavaScript",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Groq Chat Model": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Extract from File": {
+      "main": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Code in JavaScript": {
+      "main": [
+        [
+          {
+            "node": "If",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "If": {
+      "main": [
+        [
+          {
+            "node": "Append row in sheet",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Append row in sheet": {
+      "main": [
+        [
+          {
+            "node": "AI Agent1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Groq Chat Model1": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "AI Agent1",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "AI Agent1": {
+      "main": [
+        [
+          {
+            "node": "Code in JavaScript1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Code in JavaScript1": {
+      "main": [
+        [
+          {
+            "node": "Append row in sheet1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate"
+  },
+  "versionId": "45896e1b-0047-4c8a-b011-f5b43eacb361",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "YOUR_ID"
+  },
+  "id": "",
+  "tags": []
+}

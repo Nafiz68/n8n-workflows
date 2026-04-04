@@ -1,0 +1,316 @@
+{
+  "name": "arXiv AI Paper Tracker",
+  "nodes": [
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "daysInterval": 1
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.3,
+      "position": [
+        0,
+        124
+      ],
+      "id": "e92d9902-95fb-4ee0-88af-684f6e48d3ce",
+      "name": "Schedule Trigger"
+    },
+    {
+      "parameters": {
+        "url": "https://export.arxiv.org/api/query?search_query=cat:cs.AI&sortBy=submittedDate&sortOrder=descending&max_results=10",
+        "options": {
+          "response": {
+            "response": {
+              "responseFormat": "text"
+            }
+          }
+        }
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.4,
+      "position": [
+        224,
+        124
+      ],
+      "id": "8c82aa82-42bf-4ad3-9e3f-26adc537f833",
+      "name": "HTTP Request"
+    },
+    {
+      "parameters": {
+        "jsCode": "const xml = $input.first().json.data;\n\nconst items = [];\nconst entries = xml.match(/<entry>([\\s\\S]*?)<\\/entry>/g) || [];\n\nfor (const entry of entries) {\n  const title = entry.match(/<title>([\\s\\S]*?)<\\/title>/)?.[1]?.trim() || \"No title\";\n  \n  const link = entry.match(/<id>([\\s\\S]*?)<\\/id>/)?.[1]?.trim() || \"No link\";\n  \n  const abstract = entry.match(/<summary>([\\s\\S]*?)<\\/summary>/)?.[1]?.trim().replace(/\\s+/g, ' ') || \"No abstract\";\n  \n  const authorMatches = [...entry.matchAll(/<name>([\\s\\S]*?)<\\/name>/g)];\n  const authors = authorMatches.map(m => m[1].trim()).slice(0, 3).join(', ');\n\n  items.push({ json: { title, link, abstract, authors } });\n}\n\nreturn items;"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        448,
+        124
+      ],
+      "id": "1d305ee7-811e-42c3-9358-8abb5aee3a19",
+      "name": "Code in JavaScript"
+    },
+    {
+      "parameters": {
+        "options": {}
+      },
+      "type": "n8n-nodes-base.splitInBatches",
+      "typeVersion": 3,
+      "position": [
+        672,
+        124
+      ],
+      "id": "6268de37-7b3d-47c2-b706-83fdbddeb0d6",
+      "name": "Loop Over Items"
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "=You are a research assistant. Given a paper title and abstract, respond in exactly this format:\nSUMMARY: (2 sentences max, plain English)\nSCORE: (1-10 based on novelty and practical AI impact, just the number)\n\n={{ 'Title: ' + $json.title + '\\n\\nAbstract: ' + $json.abstract }}\n",
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 3.1,
+      "position": [
+        896,
+        0
+      ],
+      "id": "88d50bfb-25a0-47a0-aa10-7dabe66be5be",
+      "name": "AI Agent"
+    },
+    {
+      "parameters": {
+        "model": "llama-3.3-70b-versatile",
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatGroq",
+      "typeVersion": 1,
+      "position": [
+        968,
+        224
+      ],
+      "id": "3ccc0ee8-5fbc-4f2e-a9ae-958b3985d415",
+      "name": "Groq Chat Model",
+      "credentials": {
+        "groqApi": {
+          "id": "YOUR_CREDENTIAL_ID",
+          "name": "Groq account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "const output = $input.first().json.output;\nconst title = $('Loop Over Items').item.json.title;\nconst authors = $('Loop Over Items').item.json.authors;\nconst link = $('Loop Over Items').item.json.link;\n\nconst summaryMatch = output.match(/SUMMARY:\\s*([\\s\\S]*?)(?=SCORE:|$)/i);\nconst scoreMatch = output.match(/SCORE:\\s*(\\d+)/i);\n\nconst summary = summaryMatch?.[1]?.trim() || \"No summary\";\nconst score = scoreMatch?.[1] || \"0\";\n\nreturn [{ json: { title, authors, link, summary, score } }];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1248,
+        0
+      ],
+      "id": "d51eafff-a238-4042-84c3-bb1a250831c8",
+      "name": "Code in JavaScript1"
+    },
+    {
+      "parameters": {
+        "operation": "append",
+        "documentId": {
+          "__rl": true,
+          "value": "YOUR_SHEET_ID",
+          "mode": "list",
+          "cachedResultName": "arXiv AI Tracker",
+          "cachedResultUrl": "YOUR_SHEET_URL"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "gid=0",
+          "mode": "list",
+          "cachedResultName": "Sheet1",
+          "cachedResultUrl": "YOUR_SHEET_URL"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "Ttile": "={{ $json.title }}",
+            "Authors": "={{ $json.authors }}",
+            "Link": "={{ $json.link }}",
+            "Summary": "={{ $json.summary }}",
+            "Score": "={{ $json.score }}"
+          },
+          "matchingColumns": [],
+          "schema": [
+            {
+              "id": "Ttile",
+              "displayName": "Ttile",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Authors",
+              "displayName": "Authors",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Link",
+              "displayName": "Link",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Summary",
+              "displayName": "Summary",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Score",
+              "displayName": "Score",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.7,
+      "position": [
+        1472,
+        124
+      ],
+      "id": "9638b99a-7ee9-4750-a608-c58be287fbfe",
+      "name": "Append row in sheet",
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "YOUR_CREDENTIAL_ID",
+          "name": "Google Sheets OAuth2 API"
+        }
+      }
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Schedule Trigger": {
+      "main": [
+        [
+          {
+            "node": "HTTP Request",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "HTTP Request": {
+      "main": [
+        [
+          {
+            "node": "Code in JavaScript",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Code in JavaScript": {
+      "main": [
+        [
+          {
+            "node": "Loop Over Items",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Loop Over Items": {
+      "main": [
+        [],
+        [
+          {
+            "node": "AI Agent",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "AI Agent": {
+      "main": [
+        [
+          {
+            "node": "Code in JavaScript1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Groq Chat Model": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Code in JavaScript1": {
+      "main": [
+        [
+          {
+            "node": "Append row in sheet",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Append row in sheet": {
+      "main": [
+        [
+          {
+            "node": "Loop Over Items",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate"
+  },
+  "versionId": "3bb63276-66e6-4e9f-8f5f-fb9fff1a32bf",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "YOUR_INSTANCE_ID"
+  },
+  "id": "",
+  "tags": []
+}

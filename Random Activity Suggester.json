@@ -1,0 +1,95 @@
+{
+  "name": "Random Activity Suggester",
+  "nodes": [
+    {
+      "parameters": {
+        "path": "activity",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2.1,
+      "position": [
+        0,
+        0
+      ],
+      "id": "63e53eb0-8d50-452d-af24-a07aa44d5c67",
+      "name": "Webhook",
+      "webhookId": "YOUR_WEBHOOK_ID"
+    },
+    {
+      "parameters": {
+        "url": "https://bored-api.appbrewery.com/random",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.4,
+      "position": [
+        208,
+        0
+      ],
+      "id": "f4b45a06-2901-41b0-bae9-7fff2fd105d6",
+      "name": "HTTP Request"
+    },
+    {
+      "parameters": {
+        "chatId": "YOUR_CHAT_ID",
+        "text": "=🎯 Here's something to do!\n\nActivity: {{ $json.activity }}\nType: {{ $json.type }}\nParticipants: {{ $json.participants }}\nPrice: {{ $json.price === 0 ? \"Free 🆓\" : \"$\" + $json.price }}\n\nGo beat boredom! 💪",
+        "additionalFields": {
+          "appendAttribution": false
+        }
+      },
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [
+        416,
+        0
+      ],
+      "id": "d5b52039-c0d2-4871-b578-2402bbdccb35",
+      "name": "Send a text message",
+      "webhookId": "8c2ebf48-21aa-470f-ae1e-75a18af9f60c",
+      "credentials": {
+        "telegramApi": {
+          "id": "YOUR_CREDENTIAL_ID",
+          "name": "Telegram account"
+        }
+      }
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Webhook": {
+      "main": [
+        [
+          {
+            "node": "HTTP Request",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "HTTP Request": {
+      "main": [
+        [
+          {
+            "node": "Send a text message",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate"
+  },
+  "versionId": "61b9ff34-c923-423b-be95-25ebcbaf0f61",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "YOUR_INSTANCE_ID"
+  },
+  "id": "",
+  "tags": []
+}
