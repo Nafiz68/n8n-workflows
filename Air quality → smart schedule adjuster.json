@@ -1,0 +1,299 @@
+{
+  "name": "Air quality → smart schedule adjuster",
+  "nodes": [
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "triggerAtHour": 8
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.3,
+      "position": [
+        -32,
+        -160
+      ],
+      "id": "e584f783-440c-4875-8be9-acff074a1c9a",
+      "name": "Schedule Trigger"
+    },
+    {
+      "parameters": {
+        "url": "https://api.openaq.org/v3/locations/6234363/latest",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "X-API-Key",
+              "value": "YOUR_X-API-KEY"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.4,
+      "position": [
+        192,
+        -160
+      ],
+      "id": "935ef89e-d34d-458d-9ff9-5795769d214d",
+      "name": "HTTP Request"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 3
+          },
+          "conditions": [
+            {
+              "id": "65afc677-e593-400d-95e0-efde72144e34",
+              "leftValue": "={{ $json.shouldAlert }}",
+              "rightValue": true,
+              "operator": {
+                "type": "boolean",
+                "operation": "equals"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [
+        640,
+        -160
+      ],
+      "id": "e9185f69-d7fa-4fc5-a3d8-5069b85a9024",
+      "name": "If"
+    },
+    {
+      "parameters": {
+        "operation": "getAll",
+        "calendar": {
+          "__rl": true,
+          "value": "YOUR_EMAIL",
+          "mode": "list",
+          "cachedResultName": "YOUR_EMAIL"
+        },
+        "returnAll": true,
+        "timeMax": "={{ $now.plus({ hours: 24 }) }}",
+        "options": {
+          "maxAttendees": 10
+        }
+      },
+      "type": "n8n-nodes-base.googleCalendar",
+      "typeVersion": 1.3,
+      "position": [
+        864,
+        -352
+      ],
+      "id": "0d7d8fdd-5900-4134-b75f-374f013b91ec",
+      "name": "Get many events",
+      "credentials": {
+        "googleCalendarOAuth2Api": {
+          "id": "YOUR_CREDENTIALS",
+          "name": "Google Calendar OAuth2 API"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "=You are a helpful air quality assistant for Dhaka. When air quality is bad, you warn users about outdoor activities in a friendly, concise way.\n\nAir quality in Dhaka today: {{ $('Code').first().json.aqiEmoji }} {{ $('Code').first().json.aqiLabel }} ({{ $('Code').first().json.aqiParam }}: {{ $('Code').first().json.aqiValue }} µg/m³)\n\nMy events today:\n{{ $('Get many events').all().map((e,i) => `${i+1}. ${e.json.summary} (${e.json.start?.dateTime || e.json.start?.date || 'all day'})`).join('\\n') }}\n\nIdentify which events are outdoor or physical (walks, sports, runs, commutes, outdoor meetings). Ignore indoor events (calls, work, study). Write a short friendly Telegram warning under 100 words using simple HTML with <b> for bold. No markdown.",
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 3.1,
+      "position": [
+        896,
+        -48
+      ],
+      "id": "0c9282d6-4f13-46d4-ba6c-b2a81bd6e383",
+      "name": "AI Agent"
+    },
+    {
+      "parameters": {
+        "model": "llama-3.3-70b-versatile",
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatGroq",
+      "typeVersion": 1,
+      "position": [
+        848,
+        144
+      ],
+      "id": "3c1baa0d-8bf7-4c3e-ad41-6d75fa4c3aac",
+      "name": "Groq Chat Model",
+      "credentials": {
+        "groqApi": {
+          "id": "YOUR_GROQ_CREDENTIALS",
+          "name": "Groq account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "const aqData = $input.first().json;\nconst results = aqData.results || [];\n\n// Find PM2.5 by sensor ID\nconst pm25 = results.find(r => r.sensorsId === 15403598);\n\nif (!pm25) {\n  return [{ json: { shouldAlert: false, reason: 'No PM2.5 data found' } }];\n}\n\nconst aqiValue = pm25.value;\nconst aqiParam = 'PM2.5';\n\nlet aqiLabel, aqiEmoji, isBad;\n\nif (aqiValue <= 12)       { aqiLabel = 'Good';                            aqiEmoji = '🟢'; isBad = false; }\nelse if (aqiValue <= 35)  { aqiLabel = 'Moderate';                        aqiEmoji = '🟡'; isBad = false; }\nelse if (aqiValue <= 55)  { aqiLabel = 'Unhealthy for Sensitive Groups';  aqiEmoji = '🟠'; isBad = true; }\nelse if (aqiValue <= 150) { aqiLabel = 'Unhealthy';                       aqiEmoji = '🔴'; isBad = true; }\nelse if (aqiValue <= 250) { aqiLabel = 'Very Unhealthy';                  aqiEmoji = '🟣'; isBad = true; }\nelse                      { aqiLabel = 'Hazardous';                       aqiEmoji = '⚫'; isBad = true; }\n\nconst today = new Date().toLocaleDateString('en-GB', {\n  day: '2-digit', month: 'short', year: 'numeric'\n});\n\nreturn [{ json: { shouldAlert: isBad, aqiValue, aqiParam, aqiLabel, aqiEmoji, today } }];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        416,
+        -160
+      ],
+      "id": "072d3f7c-617e-4b79-b627-0ce75e74a72f",
+      "name": "Code"
+    },
+    {
+      "parameters": {
+        "jsCode": "const agentReply = $input.first().json.output;\nconst { aqiEmoji, aqiLabel, aqiValue, aqiParam, today } = $('Code').first().json;\n\nconst message = `🌫️ <b>Air Quality Alert — ${today}</b>\\n\\n` +\n                `${aqiEmoji} <b>${aqiLabel}</b> (${aqiParam}: ${aqiValue} µg/m³)\\n\\n` +\n                `${agentReply}`;\n\nreturn [{ json: { message } }];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1248,
+        -48
+      ],
+      "id": "70f550f4-b1c6-4029-b0ba-6426788a7473",
+      "name": "Code in JavaScript"
+    },
+    {
+      "parameters": {
+        "chatId": "YOUR_CHATID",
+        "text": "={{ $json.message }}",
+        "additionalFields": {
+          "appendAttribution": false,
+          "parse_mode": "HTML"
+        }
+      },
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [
+        1456,
+        -48
+      ],
+      "id": "f3d7e89f-3a06-4c23-8c71-971dedd990b6",
+      "name": "Send a text message",
+      "webhookId": "176bf35e-cc4f-46be-b660-fc197e68783e",
+      "credentials": {
+        "telegramApi": {
+          "id": "YOUR_TELEGRAM_CREDENTIALS",
+          "name": "Telegram account"
+        }
+      }
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Schedule Trigger": {
+      "main": [
+        [
+          {
+            "node": "HTTP Request",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "HTTP Request": {
+      "main": [
+        [
+          {
+            "node": "Code",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "If": {
+      "main": [
+        [
+          {
+            "node": "Get many events",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get many events": {
+      "main": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Groq Chat Model": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Code": {
+      "main": [
+        [
+          {
+            "node": "If",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "AI Agent": {
+      "main": [
+        [
+          {
+            "node": "Code in JavaScript",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Code in JavaScript": {
+      "main": [
+        [
+          {
+            "node": "Send a text message",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate"
+  },
+  "versionId": "b302283d-8b17-4c66-8418-f671da907069",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "YOUR_INSTANCEID"
+  },
+  "id": "",
+  "tags": []
+}
