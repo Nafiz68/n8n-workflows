@@ -1,0 +1,344 @@
+{
+  "name": "Twitch Highlight Reel Bot",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "twitch-eventsub",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2.1,
+      "position": [
+        -928,
+        640
+      ],
+      "id": "05532b92-b2a5-41af-965a-db0d70c22372",
+      "name": "Webhook",
+      "webhookId": "e08b02dd-8def-46f4-ad9b-0708129920ca"
+    },
+    {
+      "parameters": {
+        "jsCode": "const body = $input.first().json.body;\n\n// Twitch sends a challenge to verify the webhook\nif (body.challenge) {\n  return [{ json: { isChallenge: true, challenge: body.challenge } }];\n}\n\n// Real event — pass through\nreturn [{\n  json: {\n    isChallenge: false,\n    streamerName: body.event?.broadcaster_user_name,\n    streamerId: body.event?.broadcaster_user_id,\n    streamType: body.subscription?.type\n  }\n}];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -704,
+        640
+      ],
+      "id": "efdf9ef0-fa50-428d-b7fd-40aaebdffefd",
+      "name": "Code in JavaScript"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 3
+          },
+          "conditions": [
+            {
+              "id": "34c5b684-9d6f-4e26-b026-0e41c8b69b35",
+              "leftValue": "={{ $json.isChallenge }}",
+              "rightValue": true,
+              "operator": {
+                "type": "boolean",
+                "operation": "equals"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [
+        -480,
+        640
+      ],
+      "id": "065b260f-6321-4cd8-b25d-c7da6489ded4",
+      "name": "If"
+    },
+    {
+      "parameters": {
+        "respondWith": "text",
+        "responseBody": "={{ $json.challenge }}",
+        "options": {
+          "responseCode": 200
+        }
+      },
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.5,
+      "position": [
+        -256,
+        544
+      ],
+      "id": "01d4d058-e3a0-425b-9001-56e08dc5c008",
+      "name": "Respond to Webhook"
+    },
+    {
+      "parameters": {
+        "amount": 30,
+        "unit": "minutes"
+      },
+      "type": "n8n-nodes-base.wait",
+      "typeVersion": 1.1,
+      "position": [
+        -256,
+        736
+      ],
+      "id": "932bbc34-68c6-4b02-a44d-a27d6b21a33f",
+      "name": "Wait",
+      "webhookId": "5a13ee1a-f374-45bd-881d-d5df2f2e61ea"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://id.twitch.tv/oauth2/token",
+        "sendBody": true,
+        "contentType": "multipart-form-data",
+        "bodyParameters": {
+          "parameters": [
+            {
+              "name": "client_id",
+              "value": "YOUR_CLIENTID"
+            },
+            {
+              "name": "client_secret",
+              "value": "YOUR_CLIENTSECRET"
+            },
+            {
+              "name": "grant_type",
+              "value": "client_credentials"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.4,
+      "position": [
+        -32,
+        736
+      ],
+      "id": "4a1c28b6-94c9-4d02-a572-676df7d8d7f1",
+      "name": "HTTP Request"
+    },
+    {
+      "parameters": {
+        "url": "=https://api.twitch.tv/helix/clips?broadcaster_id={{ $('Code in JavaScript').first().json.streamerId }}&first=5",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Client-ID",
+              "value": "YOUR_CLIENTID"
+            },
+            {
+              "name": "Authorization",
+              "value": "=Bearer {{ $('HTTP Request').first().json.access_token }}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.4,
+      "position": [
+        192,
+        736
+      ],
+      "id": "687604fa-0743-48f2-8996-290cc0f32d13",
+      "name": "HTTP Request1"
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "=A Twitch streamer just went live. Here are their top 5 clips:\n\n{{ $input.first().json.data.map((c, i) => \n`${i+1}. ${c.title} — ${c.url} (${c.view_count} views)`\n).join('\\n') }}\n\nWrite an exciting Telegram message with this exact structure using HTML formatting:\n\n🎮 <b>STREAMER NAME is LIVE on Twitch!</b>\n\nA one sentence hype intro about the streamer.\n\n🔥 <b>Top Clips:</b>\n\n1. 🎬 <a href=\"URL\">Clip Title</a> — 940K views\n2. 🎬 <a href=\"URL\">Clip Title</a> — 770K views\n3. 🎬 <a href=\"URL\">Clip Title</a> — 742K views\n4. 🎬 <a href=\"URL\">Clip Title</a> — 713K views\n5. 🎬 <a href=\"URL\">Clip Title</a> — 674K views\n\n🚀 <b>Tune in now:</b> https://twitch.tv/STREAMERNAME\n\nFormat view counts as 940K not 940000. No markdown, only HTML tags.",
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 3.1,
+      "position": [
+        416,
+        736
+      ],
+      "id": "ac2af699-e58d-4a2b-bb3a-13621262dc08",
+      "name": "AI Agent"
+    },
+    {
+      "parameters": {
+        "model": "llama-3.3-70b-versatile",
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatGroq",
+      "typeVersion": 1,
+      "position": [
+        488,
+        960
+      ],
+      "id": "ba806c01-f6eb-4c77-badc-b516e44e4e2a",
+      "name": "Groq Chat Model",
+      "credentials": {
+        "groqApi": {
+          "id": "YOUR_GROQID",
+          "name": "Groq account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "chatId": "YOUR_CHATID",
+        "text": "={{ $json.output }}",
+        "additionalFields": {
+          "appendAttribution": false,
+          "parse_mode": "HTML"
+        }
+      },
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [
+        768,
+        736
+      ],
+      "id": "0620ff51-09c1-4b1a-80af-fcdb2c7bdc9b",
+      "name": "Send a text message",
+      "webhookId": "ca1d72ee-3bd3-4c1e-9625-f03303a95d3c",
+      "credentials": {
+        "telegramApi": {
+          "id": "YOUR_TELEGRAMID",
+          "name": "Telegram account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "content": "When your favorite streamer goes live, Twitch webhooks fire instantly. This workflow catches that event, waits 30 minutes for the stream to build up clips, then automatically fetches the top 5 most-viewed moments via the Twitch API. An AI agent crafts an exciting, beautifully formatted message with clickable clip links and view counts — delivered straight to your Telegram the moment the action peaks. Supports multiple streamers simultaneously with zero manual effort.",
+        "width": 512
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        48,
+        480
+      ],
+      "id": "e0f1f3d1-6777-4c4f-b02e-10a1c1f6ed40",
+      "name": "Sticky Note"
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Webhook": {
+      "main": [
+        [
+          {
+            "node": "Code in JavaScript",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Code in JavaScript": {
+      "main": [
+        [
+          {
+            "node": "If",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "If": {
+      "main": [
+        [
+          {
+            "node": "Respond to Webhook",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Wait",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "HTTP Request": {
+      "main": [
+        [
+          {
+            "node": "HTTP Request1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "HTTP Request1": {
+      "main": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Groq Chat Model": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "AI Agent": {
+      "main": [
+        [
+          {
+            "node": "Send a text message",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Wait": {
+      "main": [
+        [
+          {
+            "node": "HTTP Request",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate"
+  },
+  "versionId": "c6e96d11-414d-4f7b-96c7-f786bc9f6e53",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "YOUR_INSTANCEID"
+  },
+  "id": "",
+  "tags": []
+}
