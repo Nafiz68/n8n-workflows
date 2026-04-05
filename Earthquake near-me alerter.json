@@ -1,0 +1,124 @@
+{
+  "name": "Earthquake near-me alerter",
+  "nodes": [
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "minutes"
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.3,
+      "position": [
+        0,
+        0
+      ],
+      "id": "0dbf370b-cca5-4475-9ac1-518dff387350",
+      "name": "Schedule Trigger"
+    },
+    {
+      "parameters": {
+        "url": "https://earthquake.usgs.gov/fdsnws/event/1/query?format=geojson&latitude=23.8103&longitude=90.4125&maxradiuskm=500&minmagnitude=3.0&orderby=time&limit=5",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.4,
+      "position": [
+        208,
+        0
+      ],
+      "id": "69140c49-46f8-41b2-b9bb-bc89028f6de8",
+      "name": "HTTP Request"
+    },
+    {
+      "parameters": {
+        "jsCode": "// Get the earthquake data from USGS response\nconst features = $input.first().json.features;\n\n// If no earthquakes found, stop the workflow\nif (!features || features.length === 0) {\n  return [];\n}\n\n// Get the most recent earthquake\nconst latest = features[0];\n\n// Extract the details we need\nconst quakeId = latest.id;\nconst mag = latest.properties.mag;\nconst place = latest.properties.place;\nconst felt = latest.properties.felt || 'No reports';\nconst alert = latest.properties.alert || 'None';\nconst tsunami = latest.properties.tsunami === 1 ? '⚠️ YES' : 'No';\nconst url = latest.properties.url;\n\n// Convert UTC time to Dhaka time (UTC+6)\nconst utcTime = new Date(latest.properties.time);\nconst dhakaTime = new Date(utcTime.getTime() + (6 * 60 * 60 * 1000));\nconst time = dhakaTime.toLocaleString('en-GB', {\n  day: '2-digit',\n  month: 'short',\n  year: 'numeric',\n  hour: '2-digit',\n  minute: '2-digit',\n  second: '2-digit'\n}) + ' (Dhaka time)';\n\n// Deduplicate — only alert if this is a new earthquake we haven't seen before\nconst staticData = $getWorkflowStaticData('global');\n\nif (staticData.lastQuakeId === quakeId) {\n  // Same earthquake as last check — do nothing\n  return [];\n}\n\n// New earthquake found — save its ID so we don't alert again\nstaticData.lastQuakeId = quakeId;\n\n// Set emoji based on magnitude\nlet magEmoji = '🟡'; // moderate\nif (mag >= 6.0) magEmoji = '🔴'; // strong\nelse if (mag >= 5.0) magEmoji = '🟠'; // moderate-strong\nelse if (mag < 4.0) magEmoji = '🟢'; // minor\n\n// Set priority label based on magnitude\nlet priority = 'Minor';\nif (mag >= 6.0) priority = '🚨 STRONG — Take cover!';\nelse if (mag >= 5.0) priority = '⚠️ Moderate — Stay alert';\nelse if (mag >= 4.0) priority = 'Light — No action needed';\n\n// Build the Telegram message\nconst message = `${magEmoji} <b>Earthquake Detected Near Dhaka</b>\n\n<b>Magnitude:</b> M${mag} — ${priority}\n<b>Location:</b> ${place}\n<b>Time:</b> ${time}\n<b>Tsunami Risk:</b> ${tsunami}\n<b>Felt Reports:</b> ${felt}\n<b>USGS Alert Level:</b> ${alert}\n\n<a href=\"${url}\">View full details on USGS →</a>`;\n\n// Return the formatted data for the Telegram node\nreturn [{\n  json: {\n    quakeId,\n    mag,\n    place,\n    time,\n    tsunami,\n    felt,\n    alert,\n    message\n  }\n}];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        416,
+        0
+      ],
+      "id": "9df411c2-e1ba-414e-a469-e9987cce2d07",
+      "name": "Code in JavaScript"
+    },
+    {
+      "parameters": {
+        "chatId": "YOUR_CHAT_ID",
+        "text": "={{ $json.message }}",
+        "additionalFields": {
+          "appendAttribution": false,
+          "parse_mode": "HTML"
+        }
+      },
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [
+        624,
+        0
+      ],
+      "id": "a58bd9ff-ecb2-40ac-8afb-b303f171e0ae",
+      "name": "Send a text message",
+      "webhookId": "279fc8a2-d2c0-44ee-aa5c-35b9f75ef7ce",
+      "credentials": {
+        "telegramApi": {
+          "id": "YOUR_TELEGRAM_ID",
+          "name": "Telegram account"
+        }
+      }
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Schedule Trigger": {
+      "main": [
+        [
+          {
+            "node": "HTTP Request",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "HTTP Request": {
+      "main": [
+        [
+          {
+            "node": "Code in JavaScript",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Code in JavaScript": {
+      "main": [
+        [
+          {
+            "node": "Send a text message",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate"
+  },
+  "versionId": "a9c17def-26bc-47f7-9d8e-f5ef268cc76e",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "YOUR_INSTANCE_ID"
+  },
+  "id": "",
+  "tags": []
+}
