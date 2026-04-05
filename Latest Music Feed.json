@@ -1,0 +1,310 @@
+{
+  "name": "Latest Music Feed",
+  "nodes": [
+    {
+      "parameters": {
+        "content": "Every morning, it keeps an ear out for fresh drops from your favorite artists. The moment something new hits, it crafts a hype message and delivers it straight to Telegram, so you’re always first to know and never miss the vibe 🎧🔥\n",
+        "height": 144,
+        "width": 400
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        -80,
+        -288
+      ],
+      "id": "94001222-8d3e-4446-8c98-0bc036a18a84",
+      "name": "Sticky Note"
+    },
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "months",
+              "triggerAtHour": 9
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.3,
+      "position": [
+        -560,
+        12
+      ],
+      "id": "3c51fe74-f59f-4059-99ea-9d2f5b284949",
+      "name": "Schedule Trigger"
+    },
+    {
+      "parameters": {
+        "jsCode": "const artists = [\n  { name: \"Travis Scott\" },\n  { name: \"Dua Lipa\" },\n  { name: \"The Weeknd\" },\n  { name: \"Billie Eilish\" },\n  { name: \"Fetty Wap\" }\n];\n\nreturn artists.map(a => ({ json: a }));"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -336,
+        12
+      ],
+      "id": "d3243df6-1a48-4a9d-8368-ab041a282574",
+      "name": "Code in JavaScript"
+    },
+    {
+      "parameters": {
+        "url": "=https://ws.audioscrobbler.com/2.0/?method=artist.getTopAlbums&artist={{ $json.name }}&api_key=YOUR_API_KEY&format=json&limit=1",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.4,
+      "position": [
+        112,
+        -112
+      ],
+      "id": "1b58cbbb-c5c1-47f0-be46-e5a0fc8c8e69",
+      "name": "HTTP Request"
+    },
+    {
+      "parameters": {
+        "jsCode": "const artist = $input.first().json.topalbums?.['@attr']?.artist;\nconst albums = $input.first().json.topalbums?.album || [];\n\nif (albums.length === 0) {\n  return [{ json: { isNew: false, artist } }];\n}\n\nconst latest = albums[0];\n\nreturn [{\n  json: {\n    isNew: true,\n    artist,\n    albumName: latest.name,\n    albumUrl: latest.url,\n    albumImage: latest.image?.[2]?.['#text'] || ''\n  }\n}];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        336,
+        -112
+      ],
+      "id": "22f6ef66-518b-468f-8764-e89a2564fb25",
+      "name": "Code in JavaScript1"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 3
+          },
+          "conditions": [
+            {
+              "id": "370d9ea2-2839-48ac-a5de-3a8bdc0ceea8",
+              "leftValue": "={{ $json.isNew }}",
+              "rightValue": true,
+              "operator": {
+                "type": "boolean",
+                "operation": "equals"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [
+        560,
+        -112
+      ],
+      "id": "8be860fa-ca94-473b-9056-0dd707aa8fc3",
+      "name": "If"
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "=A new music release has been detected!\n\nArtist: {{ $json.artist }}\nAlbum/Single: {{ $json.albumName }}\nLink: {{ $json.albumUrl }}\n\nWrite a short exciting Telegram notification announcing this new release. Use the EXACT artist name provided above. Use HTML formatting with <b> for bold and <a href=\"URL\">text</a> for links. Include relevant music emojis. Max 80 words. No markdown.",
+        "options": {
+          "systemMessage": "You are an enthusiastic music news reporter. Keep announcements hype, fun and short."
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 3.1,
+      "position": [
+        784,
+        -112
+      ],
+      "id": "8cfe2550-8282-42fc-a35a-1579ea7563da",
+      "name": "AI Agent"
+    },
+    {
+      "parameters": {
+        "model": "llama-3.3-70b-versatile",
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatGroq",
+      "typeVersion": 1,
+      "position": [
+        856,
+        112
+      ],
+      "id": "984cff11-4dd8-4b8b-951e-a35d658e57c1",
+      "name": "Groq Chat Model",
+      "credentials": {
+        "groqApi": {
+          "id": "YOUR_GROQID",
+          "name": "Groq account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "chatId": "YOUR_CHATID",
+        "text": "={{ $json.output }}",
+        "additionalFields": {
+          "appendAttribution": false,
+          "parse_mode": "HTML"
+        }
+      },
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [
+        1136,
+        12
+      ],
+      "id": "223edece-d29c-4108-9ee6-301167eac8c5",
+      "name": "Send a text message",
+      "webhookId": "9159cca5-b29e-4b32-aa8b-013688cd746f",
+      "credentials": {
+        "telegramApi": {
+          "id": "YOUR_TELEGRAM_CREDENTIALS",
+          "name": "Telegram account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "options": {}
+      },
+      "type": "n8n-nodes-base.splitInBatches",
+      "typeVersion": 3,
+      "position": [
+        -112,
+        12
+      ],
+      "id": "11872152-d416-49b6-997e-84cb0c65237f",
+      "name": "Loop Over Items"
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Schedule Trigger": {
+      "main": [
+        [
+          {
+            "node": "Code in JavaScript",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Code in JavaScript": {
+      "main": [
+        [
+          {
+            "node": "Loop Over Items",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "HTTP Request": {
+      "main": [
+        [
+          {
+            "node": "Code in JavaScript1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Code in JavaScript1": {
+      "main": [
+        [
+          {
+            "node": "If",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "If": {
+      "main": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Loop Over Items",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Groq Chat Model": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "AI Agent": {
+      "main": [
+        [
+          {
+            "node": "Send a text message",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Loop Over Items": {
+      "main": [
+        [],
+        [
+          {
+            "node": "HTTP Request",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Send a text message": {
+      "main": [
+        [
+          {
+            "node": "Loop Over Items",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate"
+  },
+  "versionId": "b43e7cea-a7ce-4bbe-b4cb-d1679ab28d37",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "YOUR_INSTANCEID"
+  },
+  "id": "",
+  "tags": []
+}
