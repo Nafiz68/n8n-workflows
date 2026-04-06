@@ -1,0 +1,394 @@
+{
+  "name": "Project Assignment Automation",
+  "nodes": [
+    {
+      "parameters": {
+        "pollTimes": {
+          "item": [
+            {
+              "mode": "everyMinute"
+            }
+          ]
+        },
+        "documentId": {
+          "__rl": true,
+          "value": "1PwNQx-upmACtwTf5uyd8vtZfVQboplDcTWnVrtFbGtU",
+          "mode": "list",
+          "cachedResultName": "YOUR_SHEET_NAME",
+          "cachedResultUrl": "YOUR_SHEET_URL"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "gid=0",
+          "mode": "list",
+          "cachedResultName": "YOUR_SHEET_NAME",
+          "cachedResultUrl": "YOUR_SHEET_URL"
+        },
+        "event": "rowAdded",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleSheetsTrigger",
+      "typeVersion": 1,
+      "position": [
+        -176,
+        160
+      ],
+      "id": "cf3fc181-0375-4843-b530-311588002b38",
+      "name": "Google Sheets Trigger",
+      "credentials": {
+        "googleSheetsTriggerOAuth2Api": {
+          "id": "YOUR_SHEET_CREDENTIALS",
+          "name": "Google Sheets Trigger OAuth2 API"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "=Write a short, professional and motivating project assignment message for an employee.\n\nEmployee: {{ $('Code').first().json.employeeName }}\nProject: {{ $('Code').first().json.projectName }}\nDescription: {{ $('Code').first().json.description }}\nDeadline: {{ $('Code').first().json.deadline }}\nFeatures to build:\n- {{ $('Code').first().json.featureList }}\n\nRules:\n- 2 short paragraphs only\n- Professional but warm tone\n- Mention the project name and deadline\n- End with an encouraging line\n- No subject line, just the body",
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 3.1,
+      "position": [
+        1392,
+        160
+      ],
+      "id": "5eab8bde-9f05-4469-8fbc-6e8a8264b1dd",
+      "name": "AI Agent"
+    },
+    {
+      "parameters": {
+        "jsCode": "const row = $input.first().json;\n\n// Split features into array\nconst features = row.Features\n  .split(',')\n  .map(f => f.trim())\n  .filter(f => f.length > 0);\n\n// Format deadline nicely\nconst deadline = new Date(row.Deadline);\nconst formattedDeadline = deadline.toLocaleDateString('en-US', {\n  weekday: 'long',\n  year: 'numeric',\n  month: 'long',\n  day: 'numeric'\n});\n\n// Due date ISO for Trello\nconst dueISO = deadline.toISOString();\n\nreturn [{\n  json: {\n    employeeName: row.EmployeeName,\n    employeeEmail: row.EmployeeEmail,\n    projectName: row.ProjectName,\n    description: row.Description,\n    deadline: formattedDeadline,\n    dueISO,\n    features,\n    featureList: features.join('\\n- '),\n    boardName: `🚀 ${row.ProjectName} — ${row.EmployeeName}`\n  }\n}];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        48,
+        160
+      ],
+      "id": "ad1a2a3b-63f5-469d-b2f7-a63ad8d55453",
+      "name": "Code"
+    },
+    {
+      "parameters": {
+        "model": "llama-3.3-70b-versatile",
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatGroq",
+      "typeVersion": 1,
+      "position": [
+        1464,
+        384
+      ],
+      "id": "47f2e51b-b923-4771-bd82-a83c579783b6",
+      "name": "Groq Chat Model",
+      "credentials": {
+        "groqApi": {
+          "id": "YOUR_GROQ_CREDENTIALS",
+          "name": "Groq account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "sendTo": "={{ $('Code').first().json.employeeEmail }}",
+        "subject": "=🚀 You've been assigned to: {{ $('Code').first().json.projectName }}",
+        "message": "=<div style=\"font-family: Arial, sans-serif; max-width: 580px; margin: auto; padding: 32px; background: #f5f7ff; border-radius: 12px; border: 1px solid #c0ccf0;\">\n\n  <p style=\"font-size: 13px; color: #3a4a9a; letter-spacing: 2px; text-transform: uppercase; margin-bottom: 24px;\">\n    🚀 New Project Assignment\n  </p>\n\n  <!-- AI Written Briefing -->\n  <div style=\"font-size: 15px; line-height: 1.9; color: #2c2c3d; white-space: pre-line; margin-bottom: 28px;\">\n    {{ $json.output }}\n  </div>\n\n  <hr style=\"border: none; border-top: 1px solid #c0ccf0; margin: 24px 0;\">\n\n  <!-- Project Details Table -->\n  <p style=\"font-size: 13px; color: #3a4a9a; letter-spacing: 2px; text-transform: uppercase; margin-bottom: 12px;\">\n    📋 Project Details\n  </p>\n\n  <table style=\"width: 100%; border-collapse: collapse; margin-bottom: 24px;\">\n    <tr style=\"background: #dde4ff;\">\n      <td style=\"padding: 10px 14px; font-weight: bold; color: #3a4a9a;\">Project</td>\n      <td style=\"padding: 10px 14px;\">{{ $('Code').first().json.projectName }}</td>\n    </tr>\n    <tr>\n      <td style=\"padding: 10px 14px; font-weight: bold; color: #3a4a9a;\">Description</td>\n      <td style=\"padding: 10px 14px;\">{{ $('Code').first().json.description }}</td>\n    </tr>\n    <tr style=\"background: #dde4ff;\">\n      <td style=\"padding: 10px 14px; font-weight: bold; color: #3a4a9a;\">Deadline</td>\n      <td style=\"padding: 10px 14px;\">{{ $('Code').first().json.deadline }}</td>\n    </tr>\n    <tr>\n      <td style=\"padding: 10px 14px; font-weight: bold; color: #3a4a9a;\">Assigned To</td>\n      <td style=\"padding: 10px 14px;\">{{ $('Code').first().json.employeeName }}</td>\n    </tr>\n  </table>\n\n  <!-- Features List -->\n  <p style=\"font-size: 13px; color: #3a4a9a; letter-spacing: 2px; text-transform: uppercase; margin-bottom: 12px;\">\n    ✅ Your Tasks\n  </p>\n\n  <div style=\"background: #eef1ff; border-radius: 8px; padding: 16px 20px; margin-bottom: 24px; font-size: 15px; line-height: 2; color: #2c2c3d; white-space: pre-line;\">\n- {{ $('Code').first().json.featureList }}\n  </div>\n\n  <!-- Trello Button -->\n  <div style=\"background: #0052cc; border-radius: 8px; padding: 20px; text-align: center; margin-bottom: 24px;\">\n    <p style=\"color: white; font-size: 14px; margin: 0 0 12px 0;\">📋 Your project board is ready with all tasks!</p>\n    <a href=\"{{ $('Create Trello Board').first().json.url }}\" \n       style=\"background: white; color: #0052cc; padding: 10px 24px; border-radius: 6px; text-decoration: none; font-weight: bold; font-size: 14px;\">\n      Open Trello Board →\n    </a>\n  </div>\n\n  <hr style=\"border: none; border-top: 1px solid #c0ccf0; margin: 24px 0;\">\n  <p style=\"font-size: 12px; color: #6a7ab8; text-align: right;\">Sent by TaskLaunch Automation ✨</p>\n\n</div>",
+        "options": {
+          "appendAttribution": false
+        }
+      },
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2.2,
+      "position": [
+        1744,
+        160
+      ],
+      "id": "9bfabbef-e00b-471f-aa7e-c548cc9e608f",
+      "name": "Send a message",
+      "webhookId": "2a638956-aa9d-42c2-99cd-13392e9c0056",
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "YOUR_GMAIL_CREDENTIALS",
+          "name": "Gmail OAuth2 API"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "content": "Project Assignment Automation\n\nTriggers when a manager adds a new row to the Projects sheet.\n\n→ Trello board created for the project\n→ Each feature becomes a card with deadline\n→ Groq writes a personalized project briefing\n→ Employee gets one email with details + Trello link\n\n⚙️ Needs: Google Sheets, Trello, Groq, Gmail",
+        "height": 208,
+        "width": 400,
+        "color": 6
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        656,
+        -144
+      ],
+      "id": "e923c945-e453-402e-93a3-ce6216f6fda3",
+      "name": "Sticky Note"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://api.trello.com/1/boards/",
+        "sendQuery": true,
+        "queryParameters": {
+          "parameters": [
+            {
+              "name": "name",
+              "value": "={{ $('Code').item.json.boardName }}"
+            },
+            {
+              "name": "defaultLists",
+              "value": "false"
+            },
+            {
+              "name": "key",
+              "value": "YOUR_TRELLO_KEY"
+            },
+            {
+              "name": "token",
+              "value": "YOUR_TRELLO_TOKEN"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.4,
+      "position": [
+        272,
+        160
+      ],
+      "id": "33e256b2-6301-4cca-8ed0-4fc09c2861d4",
+      "name": "Create Trello Board"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://api.trello.com/1/lists",
+        "sendQuery": true,
+        "queryParameters": {
+          "parameters": [
+            {
+              "name": "name",
+              "value": "📋 Project Tasks"
+            },
+            {
+              "name": "idBoard",
+              "value": "={{ $json.id }}"
+            },
+            {
+              "name": "key",
+              "value": "YOUR_TRELLO_KEY"
+            },
+            {
+              "name": "token",
+              "value": "YOUR_TRELLO_TOKEN"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.4,
+      "position": [
+        496,
+        160
+      ],
+      "id": "b27e8fb6-9433-4c77-b0b8-54ddee6d7521",
+      "name": "Create List"
+    },
+    {
+      "parameters": {
+        "jsCode": "const features = $('Code').item.json.features;\nconst listId = $input.first().json.id;\nconst dueISO = $('Code').item.json.dueISO;\n\nreturn features.map(feature => ({\n  json: {\n    featureName: feature,\n    listId,\n    dueISO\n  }\n}));"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        720,
+        160
+      ],
+      "id": "6305d9a2-9700-45b3-97b7-a72acba37ff8",
+      "name": "Code in JavaScript"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://api.trello.com/1/cards",
+        "sendQuery": true,
+        "queryParameters": {
+          "parameters": [
+            {
+              "name": "name",
+              "value": "={{ $json.featureName }}"
+            },
+            {
+              "name": "idList",
+              "value": "={{ $json.listId }}"
+            },
+            {
+              "name": "key",
+              "value": "YOUR_TRELLO_KEY"
+            },
+            {
+              "name": "token",
+              "value": "YOUR_TRELLO_TOKEN"
+            },
+            {
+              "name": "due",
+              "value": "={{ $json.dueISO }}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.4,
+      "position": [
+        944,
+        160
+      ],
+      "id": "8be867e9-372f-4905-b05d-c3906d01415c",
+      "name": "Create Trello Cards"
+    },
+    {
+      "parameters": {
+        "aggregate": "aggregateAllItemData",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.aggregate",
+      "typeVersion": 1,
+      "position": [
+        1168,
+        160
+      ],
+      "id": "e3674785-c2a5-49f4-8c93-4b93907ed786",
+      "name": "Aggregate"
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Google Sheets Trigger": {
+      "main": [
+        [
+          {
+            "node": "Code",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Code": {
+      "main": [
+        [
+          {
+            "node": "Create Trello Board",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Groq Chat Model": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "AI Agent": {
+      "main": [
+        [
+          {
+            "node": "Send a message",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Send a message": {
+      "main": [
+        []
+      ]
+    },
+    "Create Trello Board": {
+      "main": [
+        [
+          {
+            "node": "Create List",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Create List": {
+      "main": [
+        [
+          {
+            "node": "Code in JavaScript",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Code in JavaScript": {
+      "main": [
+        [
+          {
+            "node": "Create Trello Cards",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Create Trello Cards": {
+      "main": [
+        [
+          {
+            "node": "Aggregate",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Aggregate": {
+      "main": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate",
+    "availableInMCP": false
+  },
+  "versionId": "40a26199-558a-42ac-8c60-91b229fb2a29",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "YOUR_INSTANCE_ID"
+  },
+  "id": "",
+  "tags": []
+}
