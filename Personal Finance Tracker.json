@@ -1,0 +1,205 @@
+{
+  "name": "Personal Finance Tracker",
+  "nodes": [
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "weeks",
+              "weeksInterval": 9,
+              "triggerAtDay": [
+                1
+              ],
+              "triggerAtHour": 13
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.3,
+      "position": [
+        0,
+        0
+      ],
+      "id": "7abca3f1-e44f-4c77-aa3f-d6cd3d9b66ab",
+      "name": "Schedule Trigger"
+    },
+    {
+      "parameters": {
+        "documentId": {
+          "__rl": true,
+          "value": "15uwACXXmOT3FAlmnLtA5Q1SQwjeU74bfeFymzjw_a7U",
+          "mode": "list",
+          "cachedResultName": "YOUR_SHEET_NAME",
+          "cachedResultUrl": "YOUR_SHEET_URL"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "gid=0",
+          "mode": "list",
+          "cachedResultName": "YOUR_SHEET_NAME",
+          "cachedResultUrl": "YOUR_SHEET_URL"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.7,
+      "position": [
+        224,
+        0
+      ],
+      "id": "45b030ab-a0b8-44cc-88c8-3573b91a6366",
+      "name": "Get row(s) in sheet",
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "YOUR_SHEET_CREDENTIALS",
+          "name": "Google Sheets OAuth2 API"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "const rows = $input.all();\n\nlet totalIncome = 0;\nlet totalExpense = 0;\nconst categoryTotals = {};\n\nfor (const row of rows) {\n  const type = row.json.Type?.toLowerCase();\n  const amount = parseFloat(row.json.Amount) || 0;\n  const category = row.json.Category || \"Uncategorized\";\n\n  if (type === \"income\") {\n    totalIncome += amount;\n  } else if (type === \"expense\") {\n    totalExpense += amount;\n    categoryTotals[category] = (categoryTotals[category] || 0) + amount;\n  }\n}\n\nconst balance = totalIncome - totalExpense;\n\n// Sort categories by spend\nconst topCategories = Object.entries(categoryTotals)\n  .sort((a, b) => b[1] - a[1])\n  .map(([cat, amt]) => `${cat}: ৳${amt}`)\n  .join(\", \");\n\nreturn [{\n  json: {\n    totalIncome,\n    totalExpense,\n    balance,\n    topCategories,\n    savingsRate: totalIncome > 0 ? ((balance / totalIncome) * 100).toFixed(1) : 0\n  }\n}];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        448,
+        0
+      ],
+      "id": "6d6670b3-f870-4b42-9491-90f812557e9c",
+      "name": "Code in JavaScript"
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "=You are a friendly personal finance advisor. Based on this weekly summary, give 3 short and practical money tips. Keep it conversational, not preachy.\n\nIncome: ৳{{ $('Code in JavaScript').item.json.totalIncome }}\nExpenses: ৳{{ $('Code in JavaScript').item.json.totalExpense }}\nBalance: ৳{{ $('Code in JavaScript').item.json.balance }}\nSavings Rate: {{ $('Code in JavaScript').item.json.savingsRate }}%\nTop Spending Categories: {{ $('Code in JavaScript').item.json.topCategories }}\n\nFormat: just 3 bullet points, no intro, no outro.",
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 3.1,
+      "position": [
+        672,
+        0
+      ],
+      "id": "11fb99f9-4fde-43f1-a410-71ad6ff90c20",
+      "name": "AI Agent"
+    },
+    {
+      "parameters": {
+        "model": "llama-3.3-70b-versatile",
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatGroq",
+      "typeVersion": 1,
+      "position": [
+        744,
+        224
+      ],
+      "id": "0bb0de18-a9d6-4779-acfb-afd9f2256e7f",
+      "name": "Groq Chat Model",
+      "credentials": {
+        "groqApi": {
+          "id": "YOUR_GROQ_CREDENTIALS",
+          "name": "Groq account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "sendTo": "YOUR_MAIL",
+        "subject": "💰 Your Weekly Finance Report",
+        "message": "=<div style=\"font-family: Arial, sans-serif; max-width: 560px; margin: auto; padding: 32px; background: #f4fbf4; border-radius: 12px; border: 1px solid #c0e0c0;\">\n\n  <p style=\"font-size: 13px; color: #3a7a3a; letter-spacing: 2px; text-transform: uppercase; margin-bottom: 24px;\">\n    💰 Weekly Finance Summary\n  </p>\n\n  <table style=\"width: 100%; border-collapse: collapse; margin-bottom: 24px;\">\n    <tr style=\"background: #e0f0e0;\">\n      <td style=\"padding: 10px 14px; font-weight: bold; color: #2d5a2d;\">Total Income</td>\n      <td style=\"padding: 10px 14px; color: #2d5a2d;\">৳{{ $('Code in JavaScript').item.json.totalIncome }}</td>\n    </tr>\n    <tr>\n      <td style=\"padding: 10px 14px; font-weight: bold; color: #7a2d2d;\">Total Expenses</td>\n      <td style=\"padding: 10px 14px; color: #7a2d2d;\">৳{{ $('Code in JavaScript').item.json.totalExpense }}</td>\n    </tr>\n    <tr style=\"background: #e0f0e0;\">\n      <td style=\"padding: 10px 14px; font-weight: bold;\">Balance</td>\n      <td style=\"padding: 10px 14px;\">৳{{ $('Code in JavaScript').item.json.balance }}</td>\n    </tr>\n    <tr>\n      <td style=\"padding: 10px 14px; font-weight: bold;\">Savings Rate</td>\n      <td style=\"padding: 10px 14px;\">{{ $('Code in JavaScript').item.json.savingsRate }}%</td>\n    </tr>\n    <tr style=\"background: #e0f0e0;\">\n      <td style=\"padding: 10px 14px; font-weight: bold;\">Top Categories</td>\n      <td style=\"padding: 10px 14px;\">{{ $('Code in JavaScript').item.json.topCategories }}</td>\n    </tr>\n  </table>\n\n  <p style=\"font-size: 13px; color: #3a7a3a; letter-spacing: 1px; text-transform: uppercase; margin-bottom: 12px;\">\n    💡 AI Tips For You\n  </p>\n\n  <div style=\"font-size: 15px; line-height: 1.8; color: #2c3d2c; white-space: pre-line;\">\n    {{ $json.output }}\n  </div>\n\n  <hr style=\"border: none; border-top: 1px solid #c0e0c0; margin: 28px 0;\">\n  <p style=\"font-size: 12px; color: #6a9a6a; text-align: right;\">Auto-generated every Monday morning 📊</p>\n\n</div>",
+        "options": {
+          "appendAttribution": false
+        }
+      },
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2.2,
+      "position": [
+        1024,
+        0
+      ],
+      "id": "462b85fb-04cc-4772-917b-9103d5e3ccae",
+      "name": "Send a message",
+      "webhookId": "e346341d-3f15-4418-9acd-3a776469eb13",
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "YOUR_GMAIL_CREDENTIALS",
+          "name": "Gmail OAuth2 API"
+        }
+      }
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Schedule Trigger": {
+      "main": [
+        [
+          {
+            "node": "Get row(s) in sheet",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get row(s) in sheet": {
+      "main": [
+        [
+          {
+            "node": "Code in JavaScript",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Code in JavaScript": {
+      "main": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Groq Chat Model": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "AI Agent": {
+      "main": [
+        [
+          {
+            "node": "Send a message",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate"
+  },
+  "versionId": "16112562-d081-41ef-81b0-d83fe803090f",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "YOUR_INSTANCE_ID"
+  },
+  "id": "",
+  "tags": []
+}

@@ -1,0 +1,552 @@
+{
+  "name": "Employee Onboarding Automation",
+  "nodes": [
+    {
+      "parameters": {
+        "pollTimes": {
+          "item": [
+            {
+              "mode": "everyMinute"
+            }
+          ]
+        },
+        "documentId": {
+          "__rl": true,
+          "value": "1wqolX_RakkNcp6dBMxToKkVx5Bf-c_htPQlBNT-vIj8",
+          "mode": "list",
+          "cachedResultName": "YOUR_SHEET_NAME",
+          "cachedResultUrl": "YOUR_SHEET_URL"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "gid=0",
+          "mode": "list",
+          "cachedResultName": "YOUR_SHEET_NAME",
+          "cachedResultUrl": "YOUR_SHEET_URL"
+        },
+        "event": "rowAdded",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleSheetsTrigger",
+      "typeVersion": 1,
+      "position": [
+        0,
+        176
+      ],
+      "id": "396a09e2-f753-4ad1-bd6a-995d88eaee55",
+      "name": "Google Sheets Trigger",
+      "credentials": {
+        "googleSheetsTriggerOAuth2Api": {
+          "id": "YOUR_SHEET_CREDENTIALS",
+          "name": "Google Sheets Trigger OAuth2 API"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "=Write a warm and professional employee onboarding welcome email for:\\n\\nName: {{ $('Code').item.json.name }}\\nRole: {{ $('Code').item.json.role }}\\nDepartment: {{ $('Code').item.json.department }}\\nStart Date: {{ $('Code').item.json.startDate }}\\nManager: {{ $('Code').item.json.manager }}\\nEquipment Ready: {{ $('Code').item.json.equipment }}\\n\\nRules:\\n- Warm but professional tone\\n- Mention their role and department\\n- Tell them their manager will greet them\\n- Mention their equipment is ready\\n- 3 short paragraphs\\n- No subject line, just the body\\n- End with 'Welcome aboard!",
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 3.1,
+      "position": [
+        448,
+        176
+      ],
+      "id": "44fb1c01-f5c4-4a53-b46a-00c343368fd0",
+      "name": "AI Agent"
+    },
+    {
+      "parameters": {
+        "jsCode": "const emp = $input.first().json;\n\n// Clean up name for Trello board\nconst boardName = `🚀 Onboarding - ${emp.Name}`;\n\n// Format start date nicely\nconst startDate = new Date(emp.StartDate);\nconst formattedDate = startDate.toLocaleDateString('en-US', {\n  weekday: 'long',\n  year: 'numeric',\n  month: 'long',\n  day: 'numeric'\n});\n\n// Calculate due dates\nconst day3 = new Date(startDate);\nday3.setDate(day3.getDate() + 3);\n\nconst day7 = new Date(startDate);\nday7.setDate(day7.getDate() + 7);\n\nconst day30 = new Date(startDate);\nday30.setDate(day30.getDate() + 30);\n\nreturn [{\n  json: {\n    name: emp.Name,\n    email: emp.Email,\n    role: emp.Role,\n    department: emp.Department,\n    startDate: formattedDate,\n    manager: emp.Manager,\n    equipment: emp.Equipment,\n    boardName,\n    due3: day3.toISOString(),\n    due7: day7.toISOString(),\n    due30: day30.toISOString()\n  }\n}];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        224,
+        176
+      ],
+      "id": "087c2aff-97d0-4986-800e-d2e06162c0f3",
+      "name": "Code"
+    },
+    {
+      "parameters": {
+        "model": "llama-3.3-70b-versatile",
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatGroq",
+      "typeVersion": 1,
+      "position": [
+        520,
+        400
+      ],
+      "id": "8ef0fa08-d44c-47b3-aef1-71da913dad2f",
+      "name": "Groq Chat Model",
+      "credentials": {
+        "groqApi": {
+          "id": "YOUR_GROQ_CREDENTIALS",
+          "name": "Groq account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "sendTo": "={{ $('Code').item.json.email }}",
+        "subject": "=🎉 Welcome to the Team, {{ $('Code').item.json.name }}!",
+        "message": "=<div style=\"font-family: Arial, sans-serif; max-width: 560px; margin: auto; padding: 32px; background: #f0f4ff; border-radius: 12px; border: 1px solid #c0ccf0;\">    <p style=\"font-size: 13px; color: #3a4a9a; letter-spacing: 2px; text-transform: uppercase; margin-bottom: 24px;\">     🎉 Welcome to the Team!   </p>    <div style=\"font-size: 16px; line-height: 1.9; color: #2c2c3d; white-space: pre-line;\">     {{ $json.choices[0].message.content }}   </div>    <hr style=\"border: none; border-top: 1px solid #c0ccf0; margin: 28px 0;\">    <table style=\"width: 100%; border-collapse: collapse; margin-bottom: 20px;\">     <tr style=\"background: #dde4ff;\">       <td style=\"padding: 10px 14px; font-weight: bold; color: #3a4a9a;\">Role</td>       <td style=\"padding: 10px 14px;\">{{ $('Code').item.json.role }}</td>     </tr>     <tr>       <td style=\"padding: 10px 14px; font-weight: bold; color: #3a4a9a;\">Department</td>       <td style=\"padding: 10px 14px;\">{{ $('Code').item.json.department }}</td>     </tr>     <tr style=\"background: #dde4ff;\">       <td style=\"padding: 10px 14px; font-weight: bold; color: #3a4a9a;\">Start Date</td>       <td style=\"padding: 10px 14px;\">{{ $('Code').item.json.startDate }}</td>     </tr>     <tr>       <td style=\"padding: 10px 14px; font-weight: bold; color: #3a4a9a;\">Manager</td>       <td style=\"padding: 10px 14px;\">{{ $('Code').item.json.manager }}</td>     </tr>     <tr style=\"background: #dde4ff;\">       <td style=\"padding: 10px 14px; font-weight: bold; color: #3a4a9a;\">Equipment</td>       <td style=\"padding: 10px 14px;\">{{ $('Code').item.json.equipment }}</td>     </tr>   </table>    <p style=\"font-size: 12px; color: #6a7ab8; text-align: right;\">     Sent by HR Automation System ✨   </p>  </div>",
+        "options": {
+          "appendAttribution": false
+        }
+      },
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2.2,
+      "position": [
+        800,
+        176
+      ],
+      "id": "9b765650-3b6d-486d-8e67-8f20ee4dc67f",
+      "name": "Send a message",
+      "webhookId": "de2b8593-a783-40f3-a5e0-0942ba4a1fff",
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "YOUR_GMAIL_CREDENTIALS",
+          "name": "Gmail OAuth2 API"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://api.trello.com/1/boards/",
+        "sendQuery": true,
+        "queryParameters": {
+          "parameters": [
+            {
+              "name": "name",
+              "value": "={{ $('Code').item.json.boardName }}"
+            },
+            {
+              "name": "defaultLists",
+              "value": "false"
+            },
+            {
+              "name": "key",
+              "value": "YOUR_TRELLO_KEY"
+            },
+            {
+              "name": "token",
+              "value": "YOUR_TRELLO_TOKEN"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.4,
+      "position": [
+        1024,
+        176
+      ],
+      "id": "b1621a31-e910-4fba-88a2-13191309ee7f",
+      "name": "HTTP Request"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://api.trello.com/1/lists",
+        "sendQuery": true,
+        "queryParameters": {
+          "parameters": [
+            {
+              "name": "name",
+              "value": "📋 To Do"
+            },
+            {
+              "name": "idBoard",
+              "value": "={{ $json.id }}"
+            },
+            {
+              "name": "key",
+              "value": "YOUR_TRELLO_KEY"
+            },
+            {
+              "name": "token",
+              "value": "YOUR_TRELLO_TOKEN"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.4,
+      "position": [
+        1248,
+        176
+      ],
+      "id": "2846d205-4275-4ef0-b35b-596dd1c83dc5",
+      "name": "HTTP Request1"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://api.trello.com/1/cards",
+        "sendQuery": true,
+        "queryParameters": {
+          "parameters": [
+            {
+              "name": "name",
+              "value": "✅ Complete HR paperwork"
+            },
+            {
+              "name": "idList",
+              "value": "={{ $json.id }}"
+            },
+            {
+              "name": "key",
+              "value": "YOUR_TRELLO_KEY"
+            },
+            {
+              "name": "token",
+              "value": "YOUR_TRELLO_TOKEN"
+            },
+            {
+              "name": "due",
+              "value": "={{ $('Code').item.json.due3 }}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.4,
+      "position": [
+        1472,
+        -208
+      ],
+      "id": "928e675f-3239-4e08-b003-ec032903a1da",
+      "name": "HR paperwork"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://api.trello.com/1/cards",
+        "sendQuery": true,
+        "queryParameters": {
+          "parameters": [
+            {
+              "name": "name",
+              "value": "💻 Set up equipment & accounts"
+            },
+            {
+              "name": "idList",
+              "value": "={{ $json.id }}"
+            },
+            {
+              "name": "key",
+              "value": "YOUR_TRELLO_KEY"
+            },
+            {
+              "name": "token",
+              "value": "YOUR_TRELLO_TOKEN"
+            },
+            {
+              "name": "due",
+              "value": "={{ $('Code').item.json.due3 }}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.4,
+      "position": [
+        1472,
+        -16
+      ],
+      "id": "02192edc-e63a-413c-9453-c072413f4f81",
+      "name": "Set up equipment & accounts"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://api.trello.com/1/cards",
+        "sendQuery": true,
+        "queryParameters": {
+          "parameters": [
+            {
+              "name": "name",
+              "value": "👥 Meet the team"
+            },
+            {
+              "name": "idList",
+              "value": "={{ $json.id }}"
+            },
+            {
+              "name": "key",
+              "value": "YOUR_TRELLO_KEY"
+            },
+            {
+              "name": "token",
+              "value": "YOUR_TRELLO_TOKEN"
+            },
+            {
+              "name": "due",
+              "value": "={{ $('Code').item.json.due7 }}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.4,
+      "position": [
+        1472,
+        176
+      ],
+      "id": "34176728-f4ee-49d0-98e0-52bbfe5e14d1",
+      "name": "Meet the team"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://api.trello.com/1/cards",
+        "sendQuery": true,
+        "queryParameters": {
+          "parameters": [
+            {
+              "name": "name",
+              "value": "📚 Complete role training"
+            },
+            {
+              "name": "idList",
+              "value": "={{ $json.id }}"
+            },
+            {
+              "name": "key",
+              "value": "YOUR_TRELLO_KEY"
+            },
+            {
+              "name": "token",
+              "value": "YOUR_TRELLO_TOKEN"
+            },
+            {
+              "name": "due",
+              "value": "={{ $('Code').item.json.due7 }}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.4,
+      "position": [
+        1472,
+        368
+      ],
+      "id": "1f0dfd25-9dd1-45f0-a03d-c98716f2a49e",
+      "name": "Complete role training"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://api.trello.com/1/cards",
+        "sendQuery": true,
+        "queryParameters": {
+          "parameters": [
+            {
+              "name": "name",
+              "value": "🎯 First 30-day goals review"
+            },
+            {
+              "name": "idList",
+              "value": "={{ $json.id }}"
+            },
+            {
+              "name": "key",
+              "value": "YOUR_TRELLO_KEY"
+            },
+            {
+              "name": "token",
+              "value": "YOUR_TRELLO_TOKEN"
+            },
+            {
+              "name": "due",
+              "value": "={{ $('Code').item.json.due30 }}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.4,
+      "position": [
+        1472,
+        560
+      ],
+      "id": "6e9d0011-c3ca-460d-a2a7-3bb0c4af24ea",
+      "name": "First 30-day goals review"
+    },
+    {
+      "parameters": {
+        "operation": "reply",
+        "messageId": "={{ $('Send a message').item.json.id }}",
+        "message": "=<div style=\"font-family: Arial, sans-serif; max-width: 560px; margin: auto; padding: 28px; background: #f0f4ff; border-radius: 12px; border: 1px solid #c0ccf0;\">    <p style=\"font-size: 15px; color: #2c2c3d; line-height: 1.8;\">     Hey {{ $('Code').item.json.name }}, one more thing! 👋   </p>    <p style=\"font-size: 15px; color: #2c2c3d; line-height: 1.8;\">     We've set up a personal Trello board just for you with all your onboarding tasks, deadlines, and milestones. This is your go-to place to track your first 30 days!   </p>    <div style=\"background: #0052cc; border-radius: 8px; padding: 20px; text-align: center; margin: 24px 0;\">     <p style=\"color: white; font-size: 14px; margin: 0 0 12px 0;\">📋 Your Onboarding Board is Ready!</p>     <a href=\"{{ $('HTTP Request').item.json.url }}\"         style=\"background: white; color: #0052cc; padding: 10px 24px; border-radius: 6px; text-decoration: none; font-weight: bold; font-size: 14px;\">       View My Trello Board →     </a>   </div>    <p style=\"font-size: 13px; color: #6a7ab8; line-height: 1.8;\">     Complete each task by the due date and don't hesitate to reach out to <strong>{{ $('Code').item.json.manager }}</strong> if you need any help.   </p>    <hr style=\"border: none; border-top: 1px solid #c0ccf0; margin: 24px 0;\">   <p style=\"font-size: 12px; color: #6a7ab8; text-align: right;\">HR Automation System ✨</p>  </div>",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2.2,
+      "position": [
+        1696,
+        560
+      ],
+      "id": "272a6a4f-5e78-4204-89bb-c55478f5c0ee",
+      "name": "Reply to a message",
+      "webhookId": "05ee7b82-2b62-4bd3-8dc8-52d7e629544a",
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "YOUR_GMAIL_CREDENTIALS",
+          "name": "Gmail OAuth2 API"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "content": "🏢 EMPLOYEE ONBOARDING AUTOMATION\n\nTriggers when a new row is added to the \nEmployees Google Sheet.\n\n→ AI writes a personalized welcome email\n→ Gmail sends it to the employee\n→ Trello board created with 5 onboarding tasks\n→ Board link replied in the same email thread\n\n⚙️ Needs: Google Sheets, Groq, Gmail, Trello",
+        "height": 208,
+        "width": 352
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        544,
+        -112
+      ],
+      "id": "c6787a8d-db4b-49bf-897c-ec1501d56752",
+      "name": "Sticky Note"
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Google Sheets Trigger": {
+      "main": [
+        [
+          {
+            "node": "Code",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Code": {
+      "main": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Groq Chat Model": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "AI Agent": {
+      "main": [
+        [
+          {
+            "node": "Send a message",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Send a message": {
+      "main": [
+        [
+          {
+            "node": "HTTP Request",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "HTTP Request": {
+      "main": [
+        [
+          {
+            "node": "HTTP Request1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "HTTP Request1": {
+      "main": [
+        [
+          {
+            "node": "HR paperwork",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Set up equipment & accounts",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Meet the team",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Complete role training",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "First 30-day goals review",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "First 30-day goals review": {
+      "main": [
+        [
+          {
+            "node": "Reply to a message",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate"
+  },
+  "versionId": "1c5e8b08-9c7b-4b0a-b10f-6324606cafad",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "YOUR_INSTANCE_ID"
+  },
+  "id": "",
+  "tags": []
+}
