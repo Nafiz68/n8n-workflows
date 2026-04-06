@@ -1,0 +1,176 @@
+{
+  "name": "RAG AGENT (Query)",
+  "nodes": [
+    {
+      "parameters": {
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.chatTrigger",
+      "typeVersion": 1.4,
+      "position": [
+        -768,
+        -16
+      ],
+      "id": "be0c2196-5b94-4625-807f-c0895337b600",
+      "name": "When chat message received",
+      "webhookId": "e89d1d47-ccff-4427-99fa-4777ab19f57e"
+    },
+    {
+      "parameters": {
+        "mode": "retrieve-as-tool",
+        "toolDescription": "Search the knowledge base to answer questions about the documents",
+        "pineconeIndex": {
+          "__rl": true,
+          "value": "rag-agent",
+          "mode": "list",
+          "cachedResultName": "rag-agent"
+        },
+        "topK": 5,
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.vectorStorePinecone",
+      "typeVersion": 1.3,
+      "position": [
+        -416,
+        208
+      ],
+      "id": "5f909dde-368b-4853-b3df-7e880145bb84",
+      "name": "Pinecone Vector Store",
+      "credentials": {
+        "pineconeApi": {
+          "id": "YOUR_PINECONE_CREDENTIALS",
+          "name": "Pinecone account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "modelName": "embed-english-v3.0"
+      },
+      "type": "@n8n/n8n-nodes-langchain.embeddingsCohere",
+      "typeVersion": 1,
+      "position": [
+        -336,
+        416
+      ],
+      "id": "0507d700-85f5-45b7-b367-6cffe4c9eda4",
+      "name": "Embeddings Cohere",
+      "credentials": {
+        "cohereApi": {
+          "id": "YOUR_COHERE_CREDENTIALS",
+          "name": "Cohere account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "options": {
+          "systemMessage": "You are a helpful assistant. Answer the user's question using only the information retrieved from the knowledge base. If the answer is not in the knowledge base, say \"I don't have enough information to answer that.\""
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 3.1,
+      "position": [
+        -512,
+        -16
+      ],
+      "id": "86a36706-e38d-440b-abeb-20e177916179",
+      "name": "AI Agent"
+    },
+    {
+      "parameters": {
+        "model": "llama-3.3-70b-versatile",
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatGroq",
+      "typeVersion": 1,
+      "position": [
+        -544,
+        208
+      ],
+      "id": "9f6ff60f-0d24-462d-aed7-085b1578621b",
+      "name": "Groq Chat Model",
+      "credentials": {
+        "groqApi": {
+          "id": "YOUR_GROQ_CREDENTIALS",
+          "name": "Groq account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "content": "RAG Query Workflow\nReceives a user question via the built-in chat interface, searches Pinecone for the most relevant document chunks using Cohere embeddings, and passes the retrieved context to Groq (llama3-70b) via an AI Agent to generate a grounded answer. Only answers based on indexed documents.\nStack: Chat Trigger → AI Agent → Pinecone (retrieval) + Cohere (embeddings) + Groq (LLM)",
+        "height": 192,
+        "width": 384,
+        "color": 4
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        -1008,
+        256
+      ],
+      "id": "c5290ee1-3ab7-4b18-be6b-e2d0df811985",
+      "name": "Sticky Note"
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Embeddings Cohere": {
+      "ai_embedding": [
+        [
+          {
+            "node": "Pinecone Vector Store",
+            "type": "ai_embedding",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "When chat message received": {
+      "main": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Groq Chat Model": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Pinecone Vector Store": {
+      "ai_tool": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "ai_tool",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate"
+  },
+  "versionId": "6aaaf1d5-ded5-4591-a491-bcdc22ca1d68",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "YOUR_INSTANCE_ID"
+  },
+  "id": "",
+  "tags": []
+}
