@@ -1,0 +1,196 @@
+{
+  "name": "Cold Email Agent",
+  "nodes": [
+    {
+      "parameters": {
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.chatTrigger",
+      "typeVersion": 1.4,
+      "position": [
+        0,
+        0
+      ],
+      "id": "be6fa97c-8c4b-45a9-8985-7a460d883572",
+      "name": "When chat message received",
+      "webhookId": "29d1850e-758b-4636-a183-c0ea68a9e3fa"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://api.tavily.com/search",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"api_key\": \"YOUR_API_KEY\",\n  \"query\": \"{{ $json.chatInput }} company overview products recent news what they do\",\n  \"search_depth\": \"basic\",\n  \"include_answer\": true\n}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.4,
+      "position": [
+        224,
+        0
+      ],
+      "id": "5467c579-2998-44b2-b21d-11efe015e5a4",
+      "name": "HTTP Request"
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "=Company I am targeting: {{ $('When chat message received').first().json.chatInput }}\n\nResearch summary:\n{{ $json.answer }}\n\nTop sources:\n{{ $json.results[0].title }}: {{ $json.results[0].content }}\n{{ $json.results[1].title }}: {{ $json.results[1].content }}\n{{ $json.results[2].title }}: {{ $json.results[2].content }}",
+        "options": {
+          "systemMessage": "You are an expert cold email copywriter. You write short, highly personalized, \nnon-salesy cold emails that get replies. Your goal is to start conversations, not sell aggressively.\n\nYou represent a business that offers two things:\n1. A SaaS tool that helps teams automate repetitive workflows and save time\n2. Freelance/Agency services for custom automation, AI integrations, and digital solutions\n\nMy service: I help companies automate workflows using AI tools like n8n to save time and reduce manual work as well as I build Full stack websites.\n\n\nUsing the company research provided, write a cold email that:\n- Opens with a genuine specific observation about the company (not generic flattery)\n- Connects their specific situation to a relevant pain point I solve\n- Pitches either the SaaS tool OR the agency service — whichever fits better\n- Has a soft, low-friction CTA (e.g. \"open to a 15 min chat?\")\n- Feels human, not robotic or templated\n\nReturn ONLY a valid JSON object. No explanation, no markdown, no code fences:\n\n{\n  \"subject\": \"Email subject line (curiosity-driven, max 8 words)\",\n  \"to_name\": \"Decision maker name if found in research, else null\",\n  \"to_email\": \"Email address if found in research, else null\",\n  \"company\": \"Company name\",\n  \"email_body\": \"Full email body — plain text, no placeholders, max 150 words\",\n}"
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 3.1,
+      "position": [
+        448,
+        0
+      ],
+      "id": "4f1ca910-7a6d-410f-9eef-be576c4f45d8",
+      "name": "AI Agent"
+    },
+    {
+      "parameters": {
+        "model": "llama-3.3-70b-versatile",
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatGroq",
+      "typeVersion": 1,
+      "position": [
+        520,
+        224
+      ],
+      "id": "a0758f7c-af68-42a4-83c5-76b5a3bcb0f6",
+      "name": "Groq Chat Model",
+      "credentials": {
+        "groqApi": {
+          "id": "YOUR_GROQ_CREDENTIALS",
+          "name": "Groq account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "const raw = $input.first().json.output;\n\n// Strip any accidental markdown fences\nconst cleaned = raw.replace(/```json|```/g, '').trim();\n\nconst email = JSON.parse(cleaned);\n\n// Fallback if no contact found\nemail.display_name = email.to_name || email.company;\nemail.recipient = email.to_email || 'team@' + email.company.toLowerCase().replace(/\\s+/g, '') + '.com';\n\nreturn [{ json: email }];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        800,
+        0
+      ],
+      "id": "c9054ae4-2fb0-41a1-b758-e07bb7cb46c2",
+      "name": "Code in JavaScript"
+    },
+    {
+      "parameters": {
+        "resource": "draft",
+        "subject": "={{ $json.subject }}",
+        "message": "=Hi {{ $json.display_name }},\n\n{{ $json.email_body }}\n\nWarm regards,\n\nNafiz Khan\nAutomation Specialist\nnafizk368@gmail.com\nhttps://www.linkedin.com/in/nafiz-khan-34b7a6309\n",
+        "options": {
+          "sendTo": "={{ $json.to_email }}"
+        }
+      },
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2.2,
+      "position": [
+        1024,
+        0
+      ],
+      "id": "4096f563-0527-4114-8a74-d5f1249576b9",
+      "name": "Create a draft",
+      "webhookId": "6a59eccf-3732-48f7-9d42-421f0b1f788d",
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "YOUR_GMAIL_CREDENTIALS",
+          "name": "Gmail OAuth2 API"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "content": "Give it a company name, it researches the company online via Tavily, writes a personalized cold email and saves to your draft box.",
+        "height": 128
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        432,
+        -160
+      ],
+      "id": "9a7dbc50-a53e-4bb8-a603-988df1a48f39",
+      "name": "Sticky Note"
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "When chat message received": {
+      "main": [
+        [
+          {
+            "node": "HTTP Request",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "HTTP Request": {
+      "main": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Groq Chat Model": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "AI Agent": {
+      "main": [
+        [
+          {
+            "node": "Code in JavaScript",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Code in JavaScript": {
+      "main": [
+        [
+          {
+            "node": "Create a draft",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate"
+  },
+  "versionId": "6842e696-5f2c-45cf-a85f-681960d714eb",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "YOUR_INSTANCE_ID"
+  },
+  "id": "",
+  "tags": []
+}

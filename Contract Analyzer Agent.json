@@ -1,0 +1,258 @@
+{
+  "name": "Contract Analyzer Agent",
+  "nodes": [
+    {
+      "parameters": {
+        "content": "Upload any contract PDF, it highlights risky clauses, summarizes obligations and deadlines"
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        -656,
+        -256
+      ],
+      "id": "74540473-ffde-416e-ae04-b6a5fb1c03fe",
+      "name": "Sticky Note"
+    },
+    {
+      "parameters": {
+        "pollTimes": {
+          "item": [
+            {
+              "mode": "everyHour"
+            }
+          ]
+        },
+        "triggerOn": "specificFolder",
+        "folderToWatch": {
+          "__rl": true,
+          "value": "1rse9NbqxD5ToMvdJbq41brL6zAjGx7PL",
+          "mode": "list",
+          "cachedResultName": "YOUR_FOLDER_NAME",
+          "cachedResultUrl": "YOUR_DRIVE_URL"
+        },
+        "event": "fileCreated",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleDriveTrigger",
+      "typeVersion": 1,
+      "position": [
+        -1312,
+        -32
+      ],
+      "id": "f7e9cff9-d6a4-4691-89f2-d80f9f49e3b0",
+      "name": "Google Drive Trigger",
+      "credentials": {
+        "googleDriveOAuth2Api": {
+          "id": "YOUR_DRIVE_CREDENTIALS",
+          "name": "Google Drive OAuth2 API"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "download",
+        "fileId": {
+          "__rl": true,
+          "value": "={{ $json.id }}",
+          "mode": "id"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleDrive",
+      "typeVersion": 3,
+      "position": [
+        -1088,
+        -32
+      ],
+      "id": "80e8e820-06cd-4cd4-b084-b028009e546b",
+      "name": "Download file",
+      "credentials": {
+        "googleDriveOAuth2Api": {
+          "id": "YOUR_DRIVE_CREDENTIALS",
+          "name": "Google Drive OAuth2 API"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "pdf",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.extractFromFile",
+      "typeVersion": 1.1,
+      "position": [
+        -864,
+        -32
+      ],
+      "id": "58d5c811-0f49-49d3-b054-72c8ce30a384",
+      "name": "Extract from File"
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "={{ $json.text }}",
+        "options": {
+          "systemMessage": "You are a senior legal contract analyst. Analyze the contract text provided and produce a structured risk and obligation report.\n\nReturn the output STRICTLY in the following plain text format. No markdown symbols, no bold, no hashtags, no bullet dashes — use the exact section headers and formatting shown below:\n\nCONTRACT ANALYSIS REPORT\nFile Reviewed: [contract title or type if identifiable]\nDate of Analysis: [today's date]\nAnalyzed By: AI Legal Assistant\n\n------------------------------------------------------------\n\nEXECUTIVE SUMMARY\nWrite 3-4 formal sentences summarizing what this contract is about, who the parties are, and the overall risk level (Low / Medium / High).\n\n------------------------------------------------------------\n\nRISKY CLAUSES\nList each risky clause found. For each one use this format:\n\nRISK [number]: [Short Risk Title]\nSeverity: [Low / Medium / High]\nClause Reference: [Section or page if mentioned, else \"Not specified\"]\nDescription: [Explain why this clause is risky in 2-3 sentences]\nRecommendation: [What the party should do or negotiate]\n\nIf no risky clauses found, write: No significant risk clauses identified.\n\n------------------------------------------------------------\n\nKEY OBLIGATIONS\n\nParty A Obligations:\n1. [Obligation] — Deadline: [date or \"Ongoing\" or \"Not specified\"]\n2. [Obligation] — Deadline: [date or \"Ongoing\" or \"Not specified\"]\n\nParty B Obligations:\n1. [Obligation] — Deadline: [date or \"Ongoing\" or \"Not specified\"]\n2. [Obligation] — Deadline: [date or \"Ongoing\" or \"Not specified\"]\n\n------------------------------------------------------------\n\nIMPORTANT DEADLINES & DATES\n1. [Event or milestone] — Date: [date or \"Not specified\"]\n2. [Event or milestone] — Date: [date or \"Not specified\"]\n\nIf none found, write: No explicit deadlines found in the contract.\n\n------------------------------------------------------------\n\nPENALTIES & CONSEQUENCES\nList any mentioned penalties, late fees, termination clauses, or legal consequences.\nIf none, write: No penalties or consequences explicitly stated.\n\n------------------------------------------------------------\n\nOVERALL RISK ASSESSMENT\nRisk Level: [Low / Medium / High]\nSummary: Write 2-3 sentences with your final recommendation on whether to sign, negotiate, or reject this contract.\n\n------------------------------------------------------------\n\nRules:\n- Never invent clauses or obligations not present in the text\n- If a section has no relevant content, state that clearly\n- Keep tone formal and professional\n- Plain text only, no markdown, no symbols except those shown above"
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 3.1,
+      "position": [
+        -640,
+        -32
+      ],
+      "id": "50424936-d68d-484b-9691-0050d7e4fc99",
+      "name": "AI Agent"
+    },
+    {
+      "parameters": {
+        "model": "llama-3.3-70b-versatile",
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatGroq",
+      "typeVersion": 1,
+      "position": [
+        -568,
+        192
+      ],
+      "id": "957cfda0-d21a-4431-a26b-a7ac457bac9f",
+      "name": "Groq Chat Model",
+      "credentials": {
+        "groqApi": {
+          "id": "YOUR_GROQ_CREDENTIALS",
+          "name": "Groq account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "folderId": "1rse9NbqxD5ToMvdJbq41brL6zAjGx7PL",
+        "title": "=Contract Analysis - {{ $('Google Drive Trigger').first().json.name }} - {{ $now.format('yyyy-MM-dd') }}"
+      },
+      "type": "n8n-nodes-base.googleDocs",
+      "typeVersion": 2,
+      "position": [
+        -288,
+        -32
+      ],
+      "id": "1cedc5df-03bb-4d7f-9728-faa15a86bd21",
+      "name": "Create a document",
+      "credentials": {
+        "googleDocsOAuth2Api": {
+          "id": "YOUR_GOOGLE_DOC_CREDENTIALS",
+          "name": "Google Docs OAuth2 API"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "update",
+        "documentURL": "={{ $json.id }}",
+        "actionsUi": {
+          "actionFields": [
+            {
+              "action": "insert",
+              "text": "={{ $('AI Agent').item.json.output }}"
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.googleDocs",
+      "typeVersion": 2,
+      "position": [
+        -64,
+        -32
+      ],
+      "id": "632103ff-ff7b-4028-aadb-1f26f334a3a7",
+      "name": "Update a document",
+      "credentials": {
+        "googleDocsOAuth2Api": {
+          "id": "YOUR_GOOGLE_DOC_CREDENTIALS",
+          "name": "Google Docs OAuth2 API"
+        }
+      }
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Google Drive Trigger": {
+      "main": [
+        [
+          {
+            "node": "Download file",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Download file": {
+      "main": [
+        [
+          {
+            "node": "Extract from File",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Extract from File": {
+      "main": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "AI Agent": {
+      "main": [
+        [
+          {
+            "node": "Create a document",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Groq Chat Model": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Create a document": {
+      "main": [
+        [
+          {
+            "node": "Update a document",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate"
+  },
+  "versionId": "102a812e-8105-4d55-bbe4-9a3697d0b66b",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "YOUR_INSTANCE_ID"
+  },
+  "id": "",
+  "tags": []
+}
