@@ -1,0 +1,244 @@
+{
+  "name": "Social Media Scheduler",
+  "nodes": [
+    {
+      "parameters": {
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.chatTrigger",
+      "typeVersion": 1.4,
+      "position": [
+        0,
+        0
+      ],
+      "id": "38ef9c09-fcfb-436e-bddf-653b342e441d",
+      "name": "When chat message received",
+      "webhookId": "763247e2-83ea-4e20-b687-b4c224aa870b"
+    },
+    {
+      "parameters": {
+        "options": {
+          "systemMessage": "You are a professional social media content strategist. \nWhen given a content idea, generate platform-optimized posts for Twitter, LinkedIn, and Instagram.\n\nReturn ONLY a valid JSON array. No explanation, no markdown, no code fences. Just raw JSON like this:\n\n[\n  {\n    \"platform\": \"Twitter\",\n    \"post\": \"Your tweet here (max 280 chars, punchy, use 2-3 hashtags)\",\n    \"hashtags\": \"#tag1 #tag2 #tag3\",\n    \"scheduled_date\": \"[today + 1 day, format: YYYY-MM-DD]\",\n    \"status\": \"Scheduled\"\n  },\n  {\n    \"platform\": \"LinkedIn\",\n    \"post\": \"Your LinkedIn post here (professional tone, 150-300 words, storytelling style, end with a question)\",\n    \"hashtags\": \"#tag1 #tag2 #tag3\",\n    \"scheduled_date\": \"[today + 2 days, format: YYYY-MM-DD]\",\n    \"status\": \"Scheduled\"\n  },\n  {\n    \"platform\": \"Instagram\",\n    \"post\": \"Your Instagram caption here (engaging, lifestyle tone, emojis welcome, end with CTA)\",\n    \"hashtags\": \"#tag1 #tag2 #tag3 #tag4 #tag5\",\n    \"scheduled_date\": \"[today + 3 days, format: YYYY-MM-DD]\",\n    \"status\": \"Scheduled\"\n  }\n]"
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 3.1,
+      "position": [
+        224,
+        0
+      ],
+      "id": "5b511da7-5615-4072-99bb-011a4e31bea3",
+      "name": "AI Agent"
+    },
+    {
+      "parameters": {
+        "model": "llama-3.3-70b-versatile",
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatGroq",
+      "typeVersion": 1,
+      "position": [
+        296,
+        224
+      ],
+      "id": "8776cd37-da7d-4f41-b16d-7d6142a34ee1",
+      "name": "Groq Chat Model",
+      "credentials": {
+        "groqApi": {
+          "id": "YOUR_GROQ_CREDENTIALS",
+          "name": "Groq account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "const raw = $input.first().json.output;\n\n// Strip any accidental markdown fences\nconst cleaned = raw.replace(/```json|```/g, '').trim();\n\nconst posts = JSON.parse(cleaned);\n\nreturn posts.map(post => ({ json: post }));"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        576,
+        0
+      ],
+      "id": "bf47c314-c4a3-4489-b29f-893accb80a9b",
+      "name": "Code in JavaScript"
+    },
+    {
+      "parameters": {
+        "operation": "append",
+        "documentId": {
+          "__rl": true,
+          "value": "1HmreI9JvUAExwbrRcAcspXSHMioZhoSk6RB-0Ac65L4",
+          "mode": "list",
+          "cachedResultName": "YOUR_SHEET_NAME",
+          "cachedResultUrl": "YOUR_SHEET_URL"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "gid=0",
+          "mode": "list",
+          "cachedResultName": "YOUR_SHEET_NAME",
+          "cachedResultUrl": "YOUR_SHEET_URL"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "Platform": "={{ $json.platform }}",
+            "Post": "={{ $json.post }}",
+            "Hashtags": "={{ $json.hashtags }}",
+            "Scheduled Date": "={{ $json.scheduled_date }}",
+            "Status": "={{ $json.status }}",
+            "Idea Source": "={{ $('When chat message received').item.json.chatInput }}"
+          },
+          "matchingColumns": [
+            "Platform"
+          ],
+          "schema": [
+            {
+              "id": "Platform",
+              "displayName": "Platform",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Post",
+              "displayName": "Post",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Hashtags",
+              "displayName": "Hashtags",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Scheduled Date",
+              "displayName": "Scheduled Date",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Status",
+              "displayName": "Status",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Idea Source",
+              "displayName": "Idea Source",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "row_number",
+              "displayName": "row_number",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "number",
+              "canBeUsedToMatch": true,
+              "readOnly": true,
+              "removed": true
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.7,
+      "position": [
+        800,
+        0
+      ],
+      "id": "2191f9af-e92c-4f66-afca-ba1a7387cf28",
+      "name": "Append row in sheet",
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "YOUR_GOOGLE_SHEET_CREDENTIALS",
+          "name": "Google Sheets OAuth2 API"
+        }
+      }
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "When chat message received": {
+      "main": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Groq Chat Model": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "AI Agent": {
+      "main": [
+        [
+          {
+            "node": "Code in JavaScript",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Code in JavaScript": {
+      "main": [
+        [
+          {
+            "node": "Append row in sheet",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate"
+  },
+  "versionId": "1d3295a4-09c7-43da-a8be-345f372a0150",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "YOUR_INSTANCE_ID"
+  },
+  "id": "",
+  "tags": []
+}
