@@ -1,0 +1,216 @@
+{
+  "name": "Job Application Assistant",
+  "nodes": [
+    {
+      "parameters": {
+        "formTitle": "Job Application Assistant",
+        "formFields": {
+          "values": [
+            {
+              "fieldLabel": "Company Name"
+            },
+            {
+              "fieldLabel": "Job Role"
+            },
+            {
+              "fieldLabel": "Resume",
+              "fieldType": "file"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.formTrigger",
+      "typeVersion": 2.5,
+      "position": [
+        0,
+        0
+      ],
+      "id": "29b5376b-9ace-4810-925c-43ff49919306",
+      "name": "On form submission",
+      "webhookId": "ae88a849-df71-4bdf-aafc-dbdcbcb604bb"
+    },
+    {
+      "parameters": {
+        "operation": "pdf",
+        "binaryPropertyName": "Resume",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.extractFromFile",
+      "typeVersion": 1.1,
+      "position": [
+        224,
+        0
+      ],
+      "id": "6c12e749-8939-4646-a676-d5628cc6aeaf",
+      "name": "Extract from File"
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "=Write a tailored cover letter for the following:\n\nCompany: {{ $('On form submission').item.json['Company Name'] }}\n\nRole:{{ $('On form submission').item.json['Job Role'] }}\n\nResume:{{ $json.text }}",
+        "options": {
+          "systemMessage": "You are an expert career coach. Write professional, concise, and personalized cover letters. Never use generic filler phrases. Output the cover letter text only — no subject line, no extra commentary."
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 3.1,
+      "position": [
+        448,
+        0
+      ],
+      "id": "b929e84f-6e4e-4783-ad8a-ec7fd1c13b8f",
+      "name": "AI Agent"
+    },
+    {
+      "parameters": {
+        "model": "llama-3.3-70b-versatile",
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatGroq",
+      "typeVersion": 1,
+      "position": [
+        520,
+        224
+      ],
+      "id": "17a4e540-890d-4342-98ba-e20142475b17",
+      "name": "Groq Chat Model",
+      "credentials": {
+        "groqApi": {
+          "id": "YOUR_GROQ_CREDENTIALS",
+          "name": "Groq account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "resource": "draft",
+        "subject": "=Application for {{ $('On form submission').item.json['Job Role'] }} at {{ $('On form submission').item.json['Company Name'] }}",
+        "message": "={{ $json.output }}",
+        "options": {
+          "attachmentsUi": {
+            "attachmentsBinary": [
+              {
+                "property": "=Resume"
+              }
+            ]
+          }
+        }
+      },
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2.2,
+      "position": [
+        1024,
+        0
+      ],
+      "id": "d08a8539-0e03-4d34-8c75-d75fa94c9cff",
+      "name": "Create a draft",
+      "webhookId": "b2691c30-208a-4a71-9b5f-eb02818b0870",
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "YOUR_GMAIL_CREDENTIALS",
+          "name": "Gmail OAuth2 API"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "const formItem = $('On form submission').first();\nconst currentItem = $input.first();\n\nreturn [{\n  json: currentItem.json,\n  binary: formItem.binary\n}];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        800,
+        0
+      ],
+      "id": "003ff9b4-eb97-4207-a93d-e1c9be9534da",
+      "name": "Code in JavaScript"
+    },
+    {
+      "parameters": {
+        "content": "Job Application Assistant\nTakes company name, job role, and resume (PDF/DOC) from a form, uses Groq AI to generate a personalized cover letter, and saves it as a Gmail draft with the resume attached.",
+        "height": 128,
+        "width": 352,
+        "color": 5
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        416,
+        -176
+      ],
+      "id": "b274eabb-703f-4fb0-b275-ac145fe23c4b",
+      "name": "Sticky Note"
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "On form submission": {
+      "main": [
+        [
+          {
+            "node": "Extract from File",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Extract from File": {
+      "main": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Groq Chat Model": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "AI Agent": {
+      "main": [
+        [
+          {
+            "node": "Code in JavaScript",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Code in JavaScript": {
+      "main": [
+        [
+          {
+            "node": "Create a draft",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate"
+  },
+  "versionId": "27a53dbb-ff64-4d1b-b710-556ef72c1e51",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "YOUR_INSTANCE_ID"
+  },
+  "id": "",
+  "tags": []
+}
