@@ -1,0 +1,625 @@
+{
+  "name": "Startup Intelligence Hub",
+  "nodes": [
+    {
+      "parameters": {
+        "content": "**Startup Intelligence Hub**\n\nRuns every Monday reads startup list from Google Sheets, researches each via Tavily, analyzes with Groq to detect funding rounds and product launches, sends Slack alerts for high-funding startups, adds launches to Google Calendar outreach plan, and outputs a weekly intelligence report to Google Docs + Sheets dashboard.",
+        "height": 134,
+        "width": 496,
+        "color": 6
+      },
+      "id": "d099d5a2-e547-4587-916b-5375fe33909f",
+      "name": "Sticky Note 99dbfc6c",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        1328,
+        32
+      ]
+    },
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "weeks",
+              "triggerAtDay": [
+                1
+              ],
+              "triggerAtHour": 9
+            }
+          ]
+        }
+      },
+      "id": "02fb00c9-70d7-4b29-921b-fc33763f0b60",
+      "name": "Every Monday 9 AM",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.3,
+      "position": [
+        240,
+        380
+      ]
+    },
+    {
+      "parameters": {
+        "documentId": {
+          "__rl": true,
+          "value": "1aLq2mNB42gyL5L52XEGCXzg7PZluiPE0kpIsuHnXFNM",
+          "mode": "list",
+          "cachedResultName": "YOUR_SHEET_NAME",
+          "cachedResultUrl": "YOUR_SHEET_URL"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "gid=0",
+          "mode": "list",
+          "cachedResultName": "YOUR_SHEET_NAME",
+          "cachedResultUrl": "YOUR_SHEET_URL"
+        },
+        "options": {}
+      },
+      "id": "aa59d51c-dba9-43dd-a8b9-5cf74e1d36fc",
+      "name": "Read Startups",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.7,
+      "position": [
+        464,
+        380
+      ],
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "YOUR_SHEET_CREDENTIAL",
+          "name": "Google Sheets OAuth2 API"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://api.tavily.com/search",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ { \"api_key\": \"YOUR_TAVILY_API-KEY\", \"query\": $json.Name + \" startup funding news product launch 2026\", \"search_depth\": \"advanced\", \"max_results\": 10, \"include_answer\": true } }}",
+        "options": {}
+      },
+      "id": "793a79c8-2162-4b18-be06-de951e1ac246",
+      "name": "Tavily Search",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.4,
+      "position": [
+        912,
+        256
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "const raw = $input.first().json.output;\nconst data = JSON.parse(raw.replace(/```json|```/g, '').trim());\n\nreturn [{\n  json: {\n    ...data,\n    startup: $('Split in batches').first().json.Name,\n    sector: $('Split in batches').first().json.Sector,\n    stage: $('Split in batches').first().json.Stage,\n    website: $('Split in batches').first().json.Website,\n    date: new Date().toISOString().split('T')[0]\n  }\n}];"
+      },
+      "id": "990008e1-122b-43d7-8174-2eeb8c88833e",
+      "name": "Parse + Classify",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1712,
+        256
+      ]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 3
+          },
+          "conditions": [
+            {
+              "leftValue": "={{ $json.funding_detected }}",
+              "operator": {
+                "type": "boolean",
+                "operation": "true"
+              },
+              "id": "2f31772b-d39e-45dd-93a9-bda06090e9fe"
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "c6a7c364-6ba5-4869-bed5-d281913117f4",
+      "name": "High Funding Detected?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [
+        1936,
+        256
+      ]
+    },
+    {
+      "parameters": {},
+      "id": "6a7253f5-cce4-4324-a70e-b89621162f9a",
+      "name": "Merge",
+      "type": "n8n-nodes-base.merge",
+      "typeVersion": 3.2,
+      "position": [
+        2608,
+        352
+      ]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 3
+          },
+          "conditions": [
+            {
+              "leftValue": "={{ $('Parse + Classify').item.json.product_launch_detected }}",
+              "operator": {
+                "type": "boolean",
+                "operation": "true"
+              },
+              "id": "0296db33-b553-4559-be19-85e81e6abd16"
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "4464b3c6-5dd3-4363-aa86-0949e94767e2",
+      "name": "Product Launch Detected?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [
+        2160,
+        352
+      ]
+    },
+    {
+      "parameters": {
+        "calendar": {
+          "__rl": true,
+          "value": "YOUR_GMAIL_ADDRESS",
+          "mode": "list",
+          "cachedResultName": "YOUR_GMAIL_ADDRESS"
+        },
+        "start": "={{ $now.plus(7, \"days\").set({ hour: 10, minute: 0 }).toISO() }}",
+        "end": "={{ $now.plus(7, \"days\").set({ hour: 11, minute: 0 }).toISO() }}",
+        "additionalFields": {
+          "description": "={{ $json.opportunity }}",
+          "summary": "=Outreach: {{ $json.startup }} — {{ $json.product_launch_detail }}"
+        }
+      },
+      "id": "a73be45b-79f3-478d-af73-1b85961134d6",
+      "name": "Google Calendar",
+      "type": "n8n-nodes-base.googleCalendar",
+      "typeVersion": 1.3,
+      "position": [
+        2384,
+        352
+      ],
+      "credentials": {
+        "googleCalendarOAuth2Api": {
+          "id": "YOUR_CALENDAR_CREDENTIAL",
+          "name": "Google Calendar OAuth2 API"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "options": {}
+      },
+      "id": "591cfcb1-b877-4193-8ed6-485c1598c6de",
+      "name": "Split in batches",
+      "type": "n8n-nodes-base.splitInBatches",
+      "typeVersion": 3,
+      "position": [
+        688,
+        380
+      ]
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "=Startup: {{ $('Split in batches').item.json.Name }}\\n\\nSearch Results:\\n{{ $json.results.map(r => r.title + ': ' + r.content).join('\\n\\n') }}",
+        "options": {
+          "systemMessage": "You are a startup intelligence analyst. Analyze the search results and return ONLY a valid JSON object.\\n\\nReturn format:\\n{\\n  \\\"startup\": \\\"name\",\\n  \\\"summary\": \\\"2-3 sentence summary\",\\n  \\\"key_signals\": [\\\"signal1\", \\\"signal2\"],\\n  \\\"funding_detected\": true/false,\\n  \\\"funding_amount\": \\\"$XXM or null\",\\n  \\\"product_launch_detected\": true/false,\\n  \\\"product_launch_detail\": \\\"details or null\",\\n  \\\"opportunity\": \\\"one line actionable opportunity\",\\n  \\\"growth_score\": 1-10\\n}"
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 3.1,
+      "position": [
+        1360,
+        256
+      ],
+      "id": "54ebb210-134e-4a2e-9d7e-7d723585c88c",
+      "name": "AI Agent"
+    },
+    {
+      "parameters": {
+        "model": "moonshotai/kimi-k2-instruct",
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatGroq",
+      "typeVersion": 1,
+      "position": [
+        1264,
+        416
+      ],
+      "id": "820e49f7-47ff-4236-9481-528503890529",
+      "name": "Groq Chat Model",
+      "credentials": {
+        "groqApi": {
+          "id": "YOUR_GROQ_CREDENTIAL",
+          "name": "Groq account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "chatId": "YOUR_CHAT_ID",
+        "text": "=🚨 Funding Alert — {{ $json.startup }}\n💰 {{ $json.funding_amount }} \n📊 Growth Score: {{ $json.growth_score }}/10 \nOpportunity: {{ $json.opportunity }} \n🔗 {{ $json.website }}",
+        "additionalFields": {
+          "appendAttribution": false
+        }
+      },
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [
+        2384,
+        160
+      ],
+      "id": "0ae0552c-3186-4fb0-8b8c-72a5a341f5ab",
+      "name": "Send a text message",
+      "webhookId": "da2ef3e7-bfa8-43fe-9562-7abbec4246d6",
+      "credentials": {
+        "telegramApi": {
+          "id": "YOUR_TELEGRAM_CREDENTIAL",
+          "name": "Telegram account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "append",
+        "documentId": {
+          "__rl": true,
+          "value": "1aLq2mNB42gyL5L52XEGCXzg7PZluiPE0kpIsuHnXFNM",
+          "mode": "list",
+          "cachedResultName": "YOUR_SHEET_NAME",
+          "cachedResultUrl": "YOUR_SHEET_URL"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": 1136756374,
+          "mode": "list",
+          "cachedResultName": "YOUR_SHEET_NAME",
+          "cachedResultUrl": "YOUR_SHEET_URL"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "Date": "={{ $('Parse + Classify').item.json.date }}",
+            "Funding": "={{ $('Parse + Classify').item.json.funding_detected }}",
+            "Funding Amount": "={{ $('Parse + Classify').item.json.funding_amount }}",
+            "Startup": "={{ $('Parse + Classify').item.json.startup }}",
+            "Sector": "={{ $('Parse + Classify').item.json.sector }}",
+            "Product": "={{ $('Parse + Classify').item.json.key_signals[2] }}",
+            "Stage": "={{ $('Parse + Classify').item.json.stage }}",
+            "Launch": "={{ $('Parse + Classify').item.json.product_launch_detected }}",
+            "Summary": "={{ $('Parse + Classify').item.json.summary }}",
+            "Opportunity": "={{ $('Parse + Classify').item.json.opportunity }}",
+            "Growth Score": "={{ $('Parse + Classify').item.json.growth_score }}"
+          },
+          "matchingColumns": [],
+          "schema": [
+            {
+              "id": "Date",
+              "displayName": "Date",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Funding",
+              "displayName": "Funding",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Startup",
+              "displayName": "Startup",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Funding Amount",
+              "displayName": "Funding Amount",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Sector",
+              "displayName": "Sector",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Product",
+              "displayName": "Product",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Stage",
+              "displayName": "Stage",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Launch",
+              "displayName": "Launch",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Summary",
+              "displayName": "Summary",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Opportunity",
+              "displayName": "Opportunity",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Growth Score",
+              "displayName": "Growth Score",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.7,
+      "position": [
+        2832,
+        352
+      ],
+      "id": "adee7853-c2b2-4fa7-905c-9c82665a457e",
+      "name": "Append row in sheet",
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "YOUR_SHEET_CREDENTIAL",
+          "name": "Google Sheets OAuth2 API"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "// Get input data\nconst items = $input.all();\n\n// Transform each item\nconst simplified = items.map(item => {\n  const data = item.json;\n\n  return {\n    query: data.query,\n    answer: data.answer,\n\n    // Keep only top 2 results to reduce tokens\n    sources: (data.results || []).slice(0, 2).map(r => ({\n      title: r.title,\n      url: r.url,\n      content: r.content?.slice(0, 200) // trim long content\n    }))\n  };\n});\n\n// Return cleaned output\nreturn simplified.map(i => ({ json: i }));"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1136,
+        256
+      ],
+      "id": "06557f63-8f7e-48ce-864e-3f202edacd1d",
+      "name": "Code in JavaScript"
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Every Monday 9 AM": {
+      "main": [
+        [
+          {
+            "node": "Read Startups",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Read Startups": {
+      "main": [
+        [
+          {
+            "node": "Split in batches",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Tavily Search": {
+      "main": [
+        [
+          {
+            "node": "Code in JavaScript",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Parse + Classify": {
+      "main": [
+        [
+          {
+            "node": "High Funding Detected?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "High Funding Detected?": {
+      "main": [
+        [
+          {
+            "node": "Send a text message",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Product Launch Detected?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Merge": {
+      "main": [
+        [
+          {
+            "node": "Split in batches",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Append row in sheet",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Product Launch Detected?": {
+      "main": [
+        [
+          {
+            "node": "Google Calendar",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Google Calendar": {
+      "main": [
+        [
+          {
+            "node": "Merge",
+            "type": "main",
+            "index": 1
+          }
+        ]
+      ]
+    },
+    "Split in batches": {
+      "main": [
+        [],
+        [
+          {
+            "node": "Tavily Search",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "AI Agent": {
+      "main": [
+        [
+          {
+            "node": "Parse + Classify",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Groq Chat Model": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Send a text message": {
+      "main": [
+        [
+          {
+            "node": "Merge",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Code in JavaScript": {
+      "main": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate"
+  },
+  "versionId": "169f5966-2b3c-49b2-bd47-a27c315ecbe9",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "YOUR_INSTANCE_ID"
+  },
+  "id": "",
+  "tags": []
+}
