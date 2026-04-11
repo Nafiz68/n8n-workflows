@@ -1,0 +1,358 @@
+{
+  "name": "Telegram Personal Assistant",
+  "nodes": [
+    {
+      "parameters": {
+        "descriptionType": "manual",
+        "toolDescription": "Use this to fetch and list all of today's calendar events when the user asks about their schedule, plans, or what they have today.",
+        "operation": "getAll",
+        "calendar": {
+          "__rl": true,
+          "value": "YOUR_GMAIL_ADDRESS",
+          "mode": "list",
+          "cachedResultName": "YOUR_GMAIL_ADDRESS"
+        },
+        "limit": 10,
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleCalendarTool",
+      "typeVersion": 1.3,
+      "position": [
+        704,
+        576
+      ],
+      "id": "d39e71b5-f1e1-413f-8d1f-cd985c00d8b9",
+      "name": "Get schedule",
+      "credentials": {
+        "googleCalendarOAuth2Api": {
+          "id": "YOUR_CALENDAR_CREDENTIALS",
+          "name": "Google Calendar OAuth2 API"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "={{ $json.text }}",
+        "options": {
+          "systemMessage": "=You are a personal assistant accessible via Telegram. The user's name is Nafiz.\n\nYou have access to tools to:\n- Send emails via Gmail\n- Create Google Calendar events\n- Get today's calendar schedule\n- Read and summarize the inbox\n\nAlways confirm before sending emails. For calendar events, if no time is specified assume 9am.\nReply concisely and friendly. Use bullet points for schedules and email summaries.\nToday's date is: {{ $now.toISODate() }}\n\nWhen reading emails:\n- Never call get_mails more than once per request\n- Fetch maximum 5 emails only\n- Skip ALL promotional, marketing, newsletter, and social emails entirely — do not mention them\n- Skip repeated emails from the same sender — just say \"X emails from [sender]\"\n- Only surface emails that are personal, important, or require action\n- Group by sender\n- Return a clean short summary, not a raw list\n- Only use from, subject, and snippet fields — ignore html, text, headers completely\n- Format like this:\n\n📧 Inbox Summary\n• PhantomBuster (12 emails) — automation errors, needs attention ⚠️\n• Google — Security alert ⚠️\n• John — \"Are you free Friday?\"\n\nIf all emails are promotional, socials or updates reply:\n\"📧 Nothing important in your inbox — only promotional emails.\""
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 3.1,
+      "position": [
+        704,
+        352
+      ],
+      "id": "78428b57-5b4e-44b7-a828-e57a318e4036",
+      "name": "AI Agent1"
+    },
+    {
+      "parameters": {
+        "content": "## Telegram Personal Assistant\nReceives messages via Telegram, uses Groq (llama-3.1-8b-instant) to understand intent, and executes tasks using tools send emails via Gmail, create calendar events, fetch today's schedule, or summarize the inbox. Replies back to Telegram automatically.",
+        "width": 560,
+        "color": 4
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        560,
+        160
+      ],
+      "id": "fb3491ee-54d8-4437-9932-c308bb6c300f",
+      "name": "Sticky Note"
+    },
+    {
+      "parameters": {
+        "model": "llama-3.3-70b-versatile",
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatGroq",
+      "typeVersion": 1,
+      "position": [
+        448,
+        576
+      ],
+      "id": "65b489c9-85ae-4841-8e29-e185718c2d8a",
+      "name": "Groq Chat Model",
+      "credentials": {
+        "groqApi": {
+          "id": "YOUR_GROQ_CREDENTIALS",
+          "name": "Groq account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "sessionIdType": "customKey",
+        "sessionKey": "=nafiz-v2",
+        "contextWindowLength": 0
+      },
+      "type": "@n8n/n8n-nodes-langchain.memoryBufferWindow",
+      "typeVersion": 1.3,
+      "position": [
+        576,
+        576
+      ],
+      "id": "4b55d076-ead0-4e54-bf98-02c6c02ea0c0",
+      "name": "Simple Memory"
+    },
+    {
+      "parameters": {
+        "descriptionType": "manual",
+        "toolDescription": "Use this to create a new Google Calendar event when the user wants to schedule something. Requires title, start time and end time in ISO format.",
+        "calendar": {
+          "__rl": true,
+          "value": "YOUR_GMAIL_ADDRESS",
+          "mode": "list",
+          "cachedResultName": "YOUR_GMAIL_ADDRESS"
+        },
+        "start": "={{ /*n8n-auto-generated-fromAI-override*/ $fromAI('Start', ``, 'string') }}",
+        "end": "={{ /*n8n-auto-generated-fromAI-override*/ $fromAI('End', ``, 'string') }}",
+        "useDefaultReminders": "={{ /*n8n-auto-generated-fromAI-override*/ $fromAI('Use_Default_Reminders', ``, 'boolean') }}",
+        "additionalFields": {}
+      },
+      "type": "n8n-nodes-base.googleCalendarTool",
+      "typeVersion": 1.3,
+      "position": [
+        832,
+        576
+      ],
+      "id": "0a9e87ee-029a-409c-acf2-4f18dfbfa812",
+      "name": "Create an event",
+      "credentials": {
+        "googleCalendarOAuth2Api": {
+          "id": "YOUR_CALENDAR_CREDENTIALS",
+          "name": "Google Calendar OAuth2 API"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "descriptionType": "manual",
+        "toolDescription": "Use this to send an email when the user asks to email someone. Always confirm recipient, subject and message body before calling this.",
+        "sendTo": "={{ /*n8n-auto-generated-fromAI-override*/ $fromAI('To', ``, 'string') }}",
+        "subject": "={{ /*n8n-auto-generated-fromAI-override*/ $fromAI('Subject', ``, 'string') }}",
+        "message": "={{ /*n8n-auto-generated-fromAI-override*/ $fromAI('Message', ``, 'string') }}",
+        "options": {
+          "appendAttribution": false
+        }
+      },
+      "type": "n8n-nodes-base.gmailTool",
+      "typeVersion": 2.2,
+      "position": [
+        960,
+        576
+      ],
+      "id": "8ec64957-b742-4a52-8088-adec3c6e0abc",
+      "name": "Send mails",
+      "webhookId": "fa62bc25-3ff1-41cc-9211-560796005d30",
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "YOUR_GMAIL_CREDENTIALS",
+          "name": "Gmail OAuth2 API"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "descriptionType": "manual",
+        "toolDescription": "Use this to fetch the user's unread emails when they ask to read or summarize their inbox. Returns maximum 5 emails. Only use from, subject and snippet fields in your summary — ignore html, text and headers.",
+        "operation": "getAll",
+        "limit": 5,
+        "filters": {
+          "q": "is:unread -category:promotions -category:social -from:phantombuster.com"
+        }
+      },
+      "type": "n8n-nodes-base.gmailTool",
+      "typeVersion": 2.2,
+      "position": [
+        1088,
+        576
+      ],
+      "id": "fc9bbec7-75fc-441c-a506-5f763863697a",
+      "name": "Get mails",
+      "webhookId": "521f7adb-919e-41ac-857b-c56aecfa8135",
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "YOUR_GMAIL_CREDENTIALS",
+          "name": "Gmail OAuth2 API"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "chatId": "={{ $('Code in JavaScript').item.json.chatId }}",
+        "text": "={{ $json.output }}",
+        "additionalFields": {
+          "appendAttribution": false
+        }
+      },
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [
+        1296,
+        352
+      ],
+      "id": "dbb64498-509c-4639-a883-7a85e1f6bc0d",
+      "name": "Send a text message",
+      "webhookId": "845f391b-c4d4-4212-ab4a-0ee2a66c24e2",
+      "credentials": {
+        "telegramApi": {
+          "id": "YOUR_TELEGRAM_CREDENTIALS",
+          "name": "Telegram account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "const msg = $input.first().json.message;\n\nreturn [{\n  json: {\n    text: msg.text?.trim() || '',\n    chatId: msg.chat.id,\n    firstName: msg.from?.first_name || 'there',\n    messageId: msg.message_id\n  }\n}];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        224,
+        352
+      ],
+      "id": "1801a6d0-69b6-4551-b6bd-3f6e14766915",
+      "name": "Code in JavaScript"
+    },
+    {
+      "parameters": {
+        "updates": [
+          "message"
+        ],
+        "additionalFields": {}
+      },
+      "type": "n8n-nodes-base.telegramTrigger",
+      "typeVersion": 1.2,
+      "position": [
+        0,
+        352
+      ],
+      "id": "401f5fcb-7eb9-4c49-b599-8eba9018695b",
+      "name": "Telegram Trigger",
+      "webhookId": "cc75dde2-4805-40c6-b6a0-88390135ebef",
+      "credentials": {
+        "telegramApi": {
+          "id": "YOUR_TELEGRAM_CREDENTIALS",
+          "name": "Telegram account"
+        }
+      }
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Get schedule": {
+      "ai_tool": [
+        [
+          {
+            "node": "AI Agent1",
+            "type": "ai_tool",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "AI Agent1": {
+      "main": [
+        [
+          {
+            "node": "Send a text message",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Groq Chat Model": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "AI Agent1",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Simple Memory": {
+      "ai_memory": [
+        [
+          {
+            "node": "AI Agent1",
+            "type": "ai_memory",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Create an event": {
+      "ai_tool": [
+        [
+          {
+            "node": "AI Agent1",
+            "type": "ai_tool",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Send mails": {
+      "ai_tool": [
+        [
+          {
+            "node": "AI Agent1",
+            "type": "ai_tool",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get mails": {
+      "ai_tool": [
+        [
+          {
+            "node": "AI Agent1",
+            "type": "ai_tool",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Code in JavaScript": {
+      "main": [
+        [
+          {
+            "node": "AI Agent1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Telegram Trigger": {
+      "main": [
+        [
+          {
+            "node": "Code in JavaScript",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate"
+  },
+  "versionId": "ded14695-0d26-439b-a1e9-a42c5d8251ba",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "YOUR_INSTANCE_ID"
+  },
+  "id": "",
+  "tags": []
+}
