@@ -1,0 +1,499 @@
+{
+  "name": "Personal AI Voice Agent",
+  "nodes": [
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://api.assemblyai.com/v2/transcript",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "YOUR_ASSEMBLYAI_API-KEY"
+            },
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ audio_url: $json.upload_url, speech_models: ['universal', 'slam-1'] }) }}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        -2992,
+        -72
+      ],
+      "id": "5837774b-00b8-4253-9a28-d88b269ff01e",
+      "name": "Submit Transcript Job1"
+    },
+    {
+      "parameters": {
+        "url": "=https://translate.google.com/translate_tts?ie=UTF-8&q={{ $json.cleanText }}&tl=en&client=tw-ob",
+        "options": {
+          "response": {
+            "response": {
+              "responseFormat": "file"
+            }
+          }
+        }
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.4,
+      "position": [
+        -1520,
+        -72
+      ],
+      "id": "e87f43cd-e98b-4199-89ee-fde3d929102b",
+      "name": "HTTP Request"
+    },
+    {
+      "parameters": {
+        "jsCode": "const raw = $input.item.json.output;\n\nconst clean = raw\n  .replace(/\\*\\*/g, '')        // remove bold markdown\n  .replace(/\\*/g, '')          // remove italic markdown\n  .replace(/#{1,6}\\s/g, '')    // remove headings\n  .replace(/\\n/g, ' ')         // newlines to spaces\n  .replace(/\\s+/g, ' ')        // collapse multiple spaces\n  .trim()\n  .slice(0, 200);              // Google TTS 200 char limit\n\nreturn [{ json: { cleanText: clean } }];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -1744,
+        -72
+      ],
+      "id": "5866777b-54a4-4271-acfc-09e2af6d83ee",
+      "name": "Code in JavaScript"
+    },
+    {
+      "parameters": {
+        "operation": "sendAudio",
+        "chatId": "={{ $('Telegram Trigger').item.json.message.from.id }}",
+        "binaryData": true,
+        "additionalFields": {}
+      },
+      "id": "15d3bbbe-5f11-4f10-9192-8f78cb09410e",
+      "name": "Send Audio Reply",
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [
+        -1296,
+        -72
+      ],
+      "webhookId": "e1080863-44cc-49e1-9daf-399af3ef8e9f",
+      "credentials": {
+        "telegramApi": {
+          "id": "YOUR_TELEGRAM_CREDENTIALS",
+          "name": "Telegram account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "updates": [
+          "message"
+        ],
+        "additionalFields": {}
+      },
+      "type": "n8n-nodes-base.telegramTrigger",
+      "typeVersion": 1.2,
+      "position": [
+        -3888,
+        -72
+      ],
+      "id": "c4c33bc4-2cb6-4536-a307-7b98275e8a31",
+      "name": "Telegram Trigger",
+      "webhookId": "9b057cf3-d46f-4757-9ce9-f27353b5bf5a",
+      "credentials": {
+        "telegramApi": {
+          "id": "YOUR_TELEGRAM_CREDENTIALS",
+          "name": "Telegram account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 1
+          },
+          "conditions": [
+            {
+              "id": "voice-check",
+              "leftValue": "={{ $json.message.voice }}",
+              "rightValue": "",
+              "operator": {
+                "type": "object",
+                "operation": "exists",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [
+        -3664,
+        -72
+      ],
+      "id": "2ce0b8e9-b17d-4d2d-8ce1-51481bff64ee",
+      "name": "Is Voice Message?"
+    },
+    {
+      "parameters": {
+        "resource": "file",
+        "fileId": "={{ $('Telegram Trigger').item.json.message.voice.file_id }}",
+        "additionalFields": {}
+      },
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [
+        -3440,
+        -72
+      ],
+      "id": "cb63b6d2-f8e3-4047-a315-385bcd58fe54",
+      "name": "Get a file",
+      "webhookId": "cdc89939-e76a-4219-a293-24e9457ca0ac",
+      "credentials": {
+        "telegramApi": {
+          "id": "YOUR_TELEGRAM_CREDENTIALS",
+          "name": "Telegram account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://api.assemblyai.com/v2/upload",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "YOUR_ASSEMBLYAI_API-KEY"
+            }
+          ]
+        },
+        "sendBody": true,
+        "contentType": "binaryData",
+        "inputDataFieldName": "data",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        -3216,
+        -72
+      ],
+      "id": "7bb06de0-8e4b-40cb-8842-c1a19c6d686e",
+      "name": "Upload to AssemblyAI"
+    },
+    {
+      "parameters": {},
+      "type": "n8n-nodes-base.wait",
+      "typeVersion": 1.1,
+      "position": [
+        -2768,
+        -72
+      ],
+      "id": "96547cad-8750-43c5-9527-cef3913fb55a",
+      "name": "Wait 5s",
+      "webhookId": "wait-poll-assemblyai-001"
+    },
+    {
+      "parameters": {
+        "url": "=https://api.assemblyai.com/v2/transcript/{{ $('Submit Transcript Job1').item.json.id }}",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "YOUR_ASSEMBLYAI_API-KEY"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        -2544,
+        -144
+      ],
+      "id": "fb516b09-0043-4442-a0a4-c03c6270c81c",
+      "name": "Poll Transcript Status"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 1
+          },
+          "conditions": [
+            {
+              "id": "status-check",
+              "leftValue": "={{ $json.status }}",
+              "rightValue": "completed",
+              "operator": {
+                "type": "string",
+                "operation": "equals"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [
+        -2320,
+        -72
+      ],
+      "id": "0dbbc3f0-7bd5-4395-b4dc-3e390b3de0d9",
+      "name": "Is Transcription Done?"
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "={{ $json.text }} || {{ $json.message.text }}",
+        "options": {
+          "systemMessage": "You are a helpful voice assistant. Provide clear, concise responses that work well when spoken aloud. Keep all responses under 180 characters. Be concise."
+        }
+      },
+      "id": "01e5a064-958f-49d2-bc7c-137ec79ec704",
+      "name": "AI Agent",
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 3.1,
+      "position": [
+        -2096,
+        -72
+      ]
+    },
+    {
+      "parameters": {
+        "model": "llama-3.1-8b-instant",
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatGroq",
+      "typeVersion": 1,
+      "position": [
+        -2088,
+        152
+      ],
+      "id": "b3e64a4c-6d56-44ce-bc95-289765ceffe5",
+      "name": "Groq Chat Model",
+      "credentials": {
+        "groqApi": {
+          "id": "YOUR_GROQ_CREDENTIALS",
+          "name": "Groq account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "sessionIdType": "customKey",
+        "sessionKey": "={{ $('Telegram Trigger').item.json.message.from.id }}"
+      },
+      "type": "@n8n/n8n-nodes-langchain.memoryBufferWindow",
+      "typeVersion": 1.3,
+      "position": [
+        -1960,
+        152
+      ],
+      "id": "723b02a0-4095-448f-8863-4398c8ab83d1",
+      "name": "Simple Memory"
+    },
+    {
+      "parameters": {
+        "content": "**AI Voice Agent**\n\nThis workflow listens for voice messages sent to the bot on Telegram. It downloads the audio, uploads it to AssemblyAI for transcription, passes the text to Groq AI for a response, cleans the output, converts it to speech via Google TTS, and sends the audio back to the user.\n\nNote: Users must press Start on the bot before messaging. Only voice messages are supported.",
+        "height": 144,
+        "width": 656,
+        "color": 5
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        -2816,
+        -320
+      ],
+      "id": "99a8ae78-8653-4fff-bafa-76c4d8a1a7e9",
+      "name": "Sticky Note"
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Submit Transcript Job1": {
+      "main": [
+        [
+          {
+            "node": "Wait 5s",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "HTTP Request": {
+      "main": [
+        [
+          {
+            "node": "Send Audio Reply",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Code in JavaScript": {
+      "main": [
+        [
+          {
+            "node": "HTTP Request",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Telegram Trigger": {
+      "main": [
+        [
+          {
+            "node": "Is Voice Message?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Is Voice Message?": {
+      "main": [
+        [
+          {
+            "node": "Get a file",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        []
+      ]
+    },
+    "Get a file": {
+      "main": [
+        [
+          {
+            "node": "Upload to AssemblyAI",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Upload to AssemblyAI": {
+      "main": [
+        [
+          {
+            "node": "Submit Transcript Job1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Wait 5s": {
+      "main": [
+        [
+          {
+            "node": "Poll Transcript Status",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Poll Transcript Status": {
+      "main": [
+        [
+          {
+            "node": "Is Transcription Done?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Is Transcription Done?": {
+      "main": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Wait 5s",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "AI Agent": {
+      "main": [
+        [
+          {
+            "node": "Code in JavaScript",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Groq Chat Model": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Simple Memory": {
+      "ai_memory": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "ai_memory",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate"
+  },
+  "versionId": "b565fdb0-4de3-493c-b3b7-24532974093d",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "YOUR_INSTANCE_ID"
+  },
+  "id": "",
+  "tags": []
+}
