@@ -1,0 +1,626 @@
+{
+  "name": "AI Dental Receptionist",
+  "nodes": [
+    {
+      "parameters": {
+        "options": {}
+      },
+      "id": "1c484937-c5c7-4848-abfd-d74655f13e0e",
+      "name": "When chat message received",
+      "type": "@n8n/n8n-nodes-langchain.chatTrigger",
+      "position": [
+        -960,
+        260
+      ],
+      "webhookId": "8f427031-1110-4ea3-aef7-5d06ba7d5bce",
+      "typeVersion": 1.1
+    },
+    {
+      "parameters": {
+        "sessionIdType": "customKey",
+        "sessionKey": "={{ $('When chat message received').item.json.sessionId }}"
+      },
+      "id": "57b6388e-7862-4038-bdbf-23da472a41cf",
+      "name": "Window Buffer Memory",
+      "type": "@n8n/n8n-nodes-langchain.memoryBufferWindow",
+      "position": [
+        -256,
+        632
+      ],
+      "typeVersion": 1.3
+    },
+    {
+      "parameters": {
+        "resource": "calendar",
+        "calendar": {
+          "__rl": true,
+          "value": "your email",
+          "mode": "list",
+          "cachedResultName": "your email"
+        },
+        "timeMin": "={{ /*n8n-auto-generated-fromAI-override*/ $fromAI('Start_Time', ``, 'string') }}",
+        "timeMax": "={{ /*n8n-auto-generated-fromAI-override*/ $fromAI('End_Time', ``, 'string') }}",
+        "options": {
+          "timezone": {
+            "__rl": true,
+            "value": "Asia/Dhaka",
+            "mode": "list",
+            "cachedResultName": "Asia/Dhaka"
+          }
+        }
+      },
+      "id": "d9de7a85-dddd-44ce-b32d-fa72409ce30a",
+      "name": "Check Availability",
+      "type": "n8n-nodes-base.googleCalendarTool",
+      "position": [
+        -128,
+        632
+      ],
+      "typeVersion": 1.3,
+      "executeOnce": false,
+      "credentials": {
+        "googleCalendarOAuth2Api": {
+          "id": "Your google calendar credentials",
+          "name": "Google Calendar OAuth2 API"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "calendar": {
+          "__rl": true,
+          "value": "swapnil.khan6969@gmail.com",
+          "mode": "list",
+          "cachedResultName": "swapnil.khan6969@gmail.com"
+        },
+        "start": "={{ /*n8n-auto-generated-fromAI-override*/ $fromAI('Start', ``, 'string') }}",
+        "end": "={{ /*n8n-auto-generated-fromAI-override*/ $fromAI('End', ``, 'string') }}",
+        "additionalFields": {
+          "attendees": [
+            "={{ $fromAI('attendees0_Attendees', ``, 'string') }}"
+          ],
+          "sendUpdates": "all",
+          "showMeAs": "opaque",
+          "summary": "={{ /*n8n-auto-generated-fromAI-override*/ $fromAI('Summary', ``, 'string') }}"
+        }
+      },
+      "id": "6e58240e-9171-4a50-9446-cdc8663375db",
+      "name": "Create Event",
+      "type": "n8n-nodes-base.googleCalendarTool",
+      "position": [
+        0,
+        632
+      ],
+      "typeVersion": 1.3,
+      "executeOnce": false,
+      "credentials": {
+        "googleCalendarOAuth2Api": {
+          "id": "Your google calendar credentials",
+          "name": "Google Calendar OAuth2 API"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "append",
+        "documentId": {
+          "__rl": true,
+          "value": "1bXeucEu6RETdHfGhxPRiQjCqXwW3pX8JK8btAyRtQp8",
+          "mode": "list",
+          "cachedResultName": "Your sheet name",
+          "cachedResultUrl": "Your sheet URL"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "gid=0",
+          "mode": "list",
+          "cachedResultName": "Your sheet name",
+          "cachedResultUrl": "Your sheet URL"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "Name": "={{ /*n8n-auto-generated-fromAI-override*/ $fromAI('Name', ``, 'string') }}",
+            "phone number": "={{ /*n8n-auto-generated-fromAI-override*/ $fromAI('phone_number', ``, 'string') }}",
+            "appointment date": "={{ /*n8n-auto-generated-fromAI-override*/ $fromAI('appointment_date', ``, 'string') }}",
+            "appointment time": "={{ /*n8n-auto-generated-fromAI-override*/ $fromAI('appointment_time', ``, 'string') }}",
+            "emai_id": "={{ /*n8n-auto-generated-fromAI-override*/ $fromAI('emai_id', ``, 'string') }}",
+            "purpose": "={{ /*n8n-auto-generated-fromAI-override*/ $fromAI('purpose', ``, 'string') }}",
+            "summary": "={{ /*n8n-auto-generated-fromAI-override*/ $fromAI('summary', ``, 'string') }}",
+            "call date": "={{ new Date().toLocaleString(\"sv-SE\", { timeZone: \"Asia/Dhaka\" }).replace(\"T\", \" \").slice(0, 16) }}",
+            "booking status": "={{ /*n8n-auto-generated-fromAI-override*/ $fromAI('booking_status', ``, 'string') }}"
+          },
+          "matchingColumns": [],
+          "schema": [
+            {
+              "id": "Name",
+              "displayName": "Name",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "phone number",
+              "displayName": "phone number",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "call date",
+              "displayName": "call date",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "appointment date",
+              "displayName": "appointment date",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "appointment time",
+              "displayName": "appointment time",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "emai_id",
+              "displayName": "emai_id",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "purpose",
+              "displayName": "purpose",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "summary",
+              "displayName": "summary",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "booking status",
+              "displayName": "booking status",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        },
+        "options": {}
+      },
+      "id": "32d140b4-9e4e-4404-aab5-b2804cd35eb0",
+      "name": "Add Data",
+      "type": "n8n-nodes-base.googleSheetsTool",
+      "position": [
+        128,
+        632
+      ],
+      "typeVersion": 4.5,
+      "executeOnce": false,
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "Your google sheet credentials",
+          "name": "Nafiz Sheets OAuth2 API"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "c5a6312b-187f-4f63-9172-1762221032b6",
+              "name": "output",
+              "value": "Have a nice day",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        -136,
+        112
+      ],
+      "id": "2b6c2e6e-373a-4e13-9970-87276ed0f3d3",
+      "name": "Edit Fields2"
+    },
+    {
+      "parameters": {
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatGoogleGemini",
+      "typeVersion": 1,
+      "position": [
+        -384,
+        632
+      ],
+      "id": "a459c121-b5c5-4c9d-b786-752b8898aad7",
+      "name": "Google Gemini Chat Model",
+      "credentials": {
+        "googlePalmApi": {
+          "id": "Your gemini credentials",
+          "name": ""
+        }
+      }
+    },
+    {
+      "parameters": {
+        "needsFallback": true,
+        "options": {
+          "systemMessage": "=🎯 Role of the Assistant\n\nYou are Afifah, a virtual assistant specializing in appointment management for Gulshan Dental Service. Your role is to help patients schedule consultations, answer common clinic-related questions, and log relevant information accurately while providing a warm, efficient experience.\n\n🕒 Office Hours\n\nMonday - Friday: 9:00 AM - 9:00 PM\nSaturday: 9:00 AM - 5:00 PM\nSunday: ❌ Closed\n\nConsultation Duration: 20 minutes\nBreak Between Patients: 15 minutes\n\n📅 Booking Flow\n\n1️⃣ Request Patient Info (Mandatory):\n\n* Full Name\n* Phone Number\n* Email ID\n* Purpose of Visit\n* Preferred Date and Time\n\n2️⃣ Check Availability (Google Calendar):\n\n* Respect office hours, consultation time, and break duration.\n* Use the time zone **Asia/Dhaka**.\n* Always check actual availability between `Start_Time` and `End_Time`.\n* If requested time is unavailable, politely apologize and suggest available slots on that day.\n* If available, ask the patient to confirm before proceeding.\n\n## Example:\n\n🕒 Time Format Instructions:\n\n* Always return Start_Time and End_Time in ISO 8601 format, including the +06:00 timezone offset for Bangladesh.\n* Example: \"2025-07-31T14:00:00+06:00\"\n* End_Time must be 30 minutes after Start_Time (20-minute consultation + 10-minute buffer).\n* Do NOT use \"Z\" or leave out the offset.\n* Use this range to check availability in the calendar.\n\nIf a patient requests an appointment at 10:00 AM, check Google Calendar to confirm availability between 10:00 AM and 10:20 AM, considering the consultation duration (20 minutes) and the 10-minute breaks.\nNo new slot should be assigned unless both time segments (20m booking + 10m break) are fully free.\n\n❌ Do not book the appointment immediately. Only proceed after receiving explicit patient confirmation.\n\n3️⃣ Booking Confirmation & Logging:\n\n* Once confirmed, create the event in Google Calendar and Google Sheets.\n* Google Calendar event format: `\"Patient Name - Phone Number - Purpose\"`\n* Include the patient as an attendee using their **email** (not phone number).\n* Log the full details into Google Sheets.\n* After creating the calendar event, immediately send a confirmation email \nto the patient's email address using the SendConfirmationEmail tool with \nthe HTML email template.\n\n4️⃣ Cancellation or Modification:\n\n* If the patient requests to cancel or change, first free the slot in Calendar, then update the Google Sheet.\n\n📝 Chat Summary (for internal logging)\n\nGenerate a clean summary of the conversation to help the doctor review patient interactions:\n\n* Include patient’s key questions, eg. “Asked about public holiday opening”\n* Whether a booking was made or not\n* The final date & time of appointment if applicable\n* Purpose of visit\n* Use short, clear sentences\n\n🚫 Repetition Rules (Very Important)\n\n* Once a booking is confirmed, and the patient replies with casual/polite phrases like “ok”, “thanks”, or “bye”, do not re-confirm or re-book.\n* Do not regenerate `Start_Time`, `End_Time`, or trigger any booking tools again.\n* Instead, respond with:\n\n> “You're welcome! Let us know if you need anything else.”\n\n* Only restart booking if the patient explicitly asks to make or modify an appointment.\n\n⚠️ Important Booking Rule\n\n* Always collect and confirm all mandatory patient details before checking availability or creating any appointment.\n* Mandatory details include:\n\n  * Full Name\n  * Phone Number\n  * Email ID\n  * Purpose of Visit\n  * Preferred Date and Time\n* Do not proceed to availability checking, calendar actions, or booking creation unless all required information has been provided by the patient.\n\n\n4️⃣ FAQ-Only Interactions:\n\nIf no booking is made and the patient only asks questions, record the \"booking status\" column as \"No\" in Google Sheets.\n\nThis applies to interactions involving opening hours, holidays, treatments, pricing, etc. without any appointment request.\n\nIf booking for appointment is made, then record the \"booking status\" column as \"Yes\" in Google Sheets.\n\n💬 Communication Style\n\n✅ Respond in warm, friendly, and professional language\n✅ Confirm final appointment date and time clearly before booking\n✅ Be concise and polite during casual interactions or small talk\n✅ Handle FAQ-type questions (e.g. about holidays, treatments, or pricing) accurately\n\n📅 Today's date: {{ $now.toFormat('EEEE, MMMM d, yyyy') }}\n"
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 2.1,
+      "position": [
+        -200,
+        408
+      ],
+      "id": "07fbd5dc-174f-47fa-ac8c-d46dbbc3df5f",
+      "name": "AI Agent1"
+    },
+    {
+      "parameters": {
+        "model": "llama-3.3-70b-versatile",
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatGroq",
+      "typeVersion": 1,
+      "position": [
+        -512,
+        632
+      ],
+      "id": "b8fd31c1-c64c-4881-a4ea-c7abd92f3d34",
+      "name": "Groq Chat Model",
+      "credentials": {
+        "groqApi": {
+          "id": "Your groq credentials",
+          "name": "Groq account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "sendTo": "={{ $fromAI('To', ``, 'string') }}",
+        "subject": "=✓ Appointment Confirmed – Gulshan Dental Service",
+        "message": "=<!DOCTYPE html>\n<html>\n<head><meta charset=\"UTF-8\"><meta name=\"viewport\" content=\"width=device-width, initial-scale=1.0\"></head>\n<body style=\"margin:0;padding:0;background:#f4f7f4;font-family:'Helvetica Neue',Arial,sans-serif;\">\n<table width=\"100%\" cellpadding=\"0\" cellspacing=\"0\" style=\"background:#f4f7f4;padding:32px 16px;\">\n  <tr><td align=\"center\">\n    <table width=\"560\" cellpadding=\"0\" cellspacing=\"0\" style=\"background:#ffffff;border-radius:12px;overflow:hidden;border:1px solid #d3e8d3;\">\n\n      <!-- Header -->\n      <tr>\n        <td style=\"background:#0F6E56;padding:32px 32px 24px;text-align:center;\">\n          <p style=\"color:#9FE1CB;font-size:12px;letter-spacing:0.1em;text-transform:uppercase;margin:0 0 8px;\">Gulshan Dental Service</p>\n          <h1 style=\"color:#ffffff;font-size:26px;font-weight:400;font-style:italic;margin:0;font-family:Georgia,serif;\">Appointment Confirmed ✓</h1>\n        </td>\n      </tr>\n\n      <!-- Greeting -->\n      <tr>\n        <td style=\"padding:28px 32px 0;\">\n          <p style=\"font-size:15px;color:#444;line-height:1.7;margin:0;\">\n            Dear <strong style=\"color:#0F6E56;\">{{ $fromAI('Name', '', 'string') }}</strong>,<br>\n            Your appointment has been successfully booked. We look forward to welcoming you at our clinic!\n          </p>\n        </td>\n      </tr>\n\n      <!-- Appointment Details Box -->\n      <tr>\n        <td style=\"padding:20px 32px;\">\n          <table width=\"100%\" cellpadding=\"0\" cellspacing=\"0\" style=\"background:#E1F5EE;border-radius:10px;border-left:4px solid #0F6E56;padding:20px 24px;\">\n            <tr><td colspan=\"2\" style=\"padding-bottom:12px;\">\n              <p style=\"font-size:11px;color:#0F6E56;text-transform:uppercase;letter-spacing:0.1em;margin:0;font-weight:600;\">📋 Appointment Details</p>\n            </td></tr>\n            <tr>\n              <td style=\"font-size:13px;color:#085041;padding:5px 0;width:40%;\">📅 Date</td>\n              <td style=\"font-size:14px;color:#04342C;font-weight:600;padding:5px 0;\">{{ $fromAI('appointment_date', '', 'string') }}</td>\n            </tr>\n            <tr>\n              <td style=\"font-size:13px;color:#085041;padding:5px 0;\">🕐 Time</td>\n              <td style=\"font-size:14px;color:#04342C;font-weight:600;padding:5px 0;\">{{ $fromAI('appointment_time', '', 'string') }}</td>\n            </tr>\n            <tr>\n              <td style=\"font-size:13px;color:#085041;padding:5px 0;\">🦷 Purpose</td>\n              <td style=\"font-size:14px;color:#04342C;font-weight:600;padding:5px 0;\">{{ $fromAI('purpose', '', 'string') }}</td>\n            </tr>\n            <tr>\n              <td style=\"font-size:13px;color:#085041;padding:5px 0;\">📞 Phone</td>\n              <td style=\"font-size:14px;color:#04342C;font-weight:600;padding:5px 0;\">{{ $fromAI('phone_number', '', 'string') }}</td>\n            </tr>\n          </table>\n        </td>\n      </tr>\n\n      <!-- Location -->\n      <tr>\n        <td style=\"padding:0 32px 20px;\">\n          <table width=\"100%\" cellpadding=\"0\" cellspacing=\"0\" style=\"background:#f9f9f7;border-radius:8px;padding:16px 20px;\">\n            <tr>\n              <td style=\"font-size:13px;color:#555;line-height:1.7;\">\n                📍 <strong style=\"color:#333;\">Gulshan Dental Service</strong><br>\n                Gulshan-1, Dhaka 1212<br>\n                📞 +880 1900-000000\n              </td>\n            </tr>\n          </table>\n        </td>\n      </tr>\n\n      <!-- Reminder -->\n      <tr>\n        <td style=\"padding:0 32px 28px;\">\n          <p style=\"font-size:13px;color:#777;line-height:1.7;margin:0;border-top:1px solid #e8ede8;padding-top:16px;\">\n            ⏰ Please arrive <strong>5 minutes early</strong>.<br>\n            Need to reschedule? Contact us at least <strong>24 hours before</strong> your appointment.\n          </p>\n        </td>\n      </tr>\n\n      <!-- Footer -->\n      <tr>\n        <td style=\"background:#f4f7f4;padding:16px 32px;text-align:center;border-top:1px solid #e0e8e0;\">\n          <p style=\"font-size:12px;color:#999;margin:0;\">© 2025 Gulshan Dental Service · Gulshan, Dhaka</p>\n          <p style=\"font-size:12px;color:#bbb;margin:4px 0 0;\">This is an automated confirmation. Please do not reply to this email.</p>\n        </td>\n      </tr>\n\n    </table>\n  </td></tr>\n</table>\n</body>\n</html>",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.gmailTool",
+      "typeVersion": 2.2,
+      "position": [
+        256,
+        632
+      ],
+      "id": "c1f9d522-732a-41f4-aa2c-9cddcfd771da",
+      "name": "Send a message in Gmail",
+      "webhookId": "96904edb-5bbe-447e-9cd0-189033810afb",
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "Your gmail credentials",
+          "name": "Nafiz's Gmail account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": false,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 3
+          },
+          "conditions": [
+            {
+              "id": "13e6f2da-79e4-4b47-a8c2-d4c5ccaa0ce9",
+              "leftValue": "={{ $json.chatInput }}",
+              "rightValue": "bye",
+              "operator": {
+                "type": "string",
+                "operation": "equals",
+                "name": "filter.operator.equals"
+              }
+            },
+            {
+              "id": "f978bf21-ab06-4a42-86d4-b6cc68781c2b",
+              "leftValue": "={{ $json.chatInput }}",
+              "rightValue": "goodbye",
+              "operator": {
+                "type": "string",
+                "operation": "equals",
+                "name": "filter.operator.equals"
+              }
+            },
+            {
+              "id": "7619ea96-a231-4979-8981-285b28adf4f8",
+              "leftValue": "={{ $json.chatInput }}",
+              "rightValue": "see you",
+              "operator": {
+                "type": "string",
+                "operation": "equals",
+                "name": "filter.operator.equals"
+              }
+            },
+            {
+              "id": "173cfb7b-05e9-4b46-9edc-942d113aad53",
+              "leftValue": "={{ $json.chatInput }}",
+              "rightValue": "take care",
+              "operator": {
+                "type": "string",
+                "operation": "equals",
+                "name": "filter.operator.equals"
+              }
+            },
+            {
+              "id": "37345972-1f5e-42b3-90e5-4fc3cc2357d3",
+              "leftValue": "={{ $json.chatInput }}",
+              "rightValue": "that's all",
+              "operator": {
+                "type": "string",
+                "operation": "equals",
+                "name": "filter.operator.equals"
+              }
+            },
+            {
+              "id": "76ebbf5a-efd1-4ecc-ab50-897d64b5eb77",
+              "leftValue": "={{ $json.chatInput }}",
+              "rightValue": "no more questions",
+              "operator": {
+                "type": "string",
+                "operation": "equals",
+                "name": "filter.operator.equals"
+              }
+            },
+            {
+              "id": "6a642c52-123f-4ea7-8bcd-959c46dfa79b",
+              "leftValue": "={{ $json.chatInput }}",
+              "rightValue": "thank you bye",
+              "operator": {
+                "type": "string",
+                "operation": "equals",
+                "name": "filter.operator.equals"
+              }
+            },
+            {
+              "id": "7c6a0f08-bece-4744-bf69-4a5fe6789ac9",
+              "leftValue": "={{ $json.chatInput }}",
+              "rightValue": "thanks bye",
+              "operator": {
+                "type": "string",
+                "operation": "equals",
+                "name": "filter.operator.equals"
+              }
+            },
+            {
+              "id": "f1c376df-528d-4e85-ab68-006f9ac31fdc",
+              "leftValue": "={{ $json.chatInput }}",
+              "rightValue": "ok thanks",
+              "operator": {
+                "type": "string",
+                "operation": "equals",
+                "name": "filter.operator.equals"
+              }
+            },
+            {
+              "id": "0f23feaf-1ed6-448f-b236-86ec7b7dae3f",
+              "leftValue": "={{ $json.chatInput }}",
+              "rightValue": "all done",
+              "operator": {
+                "type": "string",
+                "operation": "equals",
+                "name": "filter.operator.equals"
+              }
+            }
+          ],
+          "combinator": "or"
+        },
+        "options": {
+          "ignoreCase": true
+        }
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [
+        -736,
+        260
+      ],
+      "id": "569a5d03-560b-4383-8f64-ecf4818f7444",
+      "name": "If"
+    },
+    {
+      "parameters": {
+        "content": "",
+        "height": 880,
+        "width": 1568,
+        "color": 5
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        -1088,
+        16
+      ],
+      "id": "dfff98d6-1351-4fc0-8c25-c6d7dec3bd98",
+      "name": "Sticky Note"
+    },
+    {
+      "parameters": {
+        "content": "## 🦷 Gulshan Dental – AI Receptionist 'Afifah' is a virtual assistant that chats with patients, checks Google Calendar for availability, and books appointments automatically. Once booked, it logs the details to Google Sheets and sends a confirmation email to the patient.",
+        "width": 832
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        -704,
+        -176
+      ],
+      "id": "21bb431e-fe03-499a-884b-9d4893d594ed",
+      "name": "Sticky Note1"
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Check Availability": {
+      "ai_tool": [
+        [
+          {
+            "node": "AI Agent1",
+            "type": "ai_tool",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Window Buffer Memory": {
+      "ai_memory": [
+        [
+          {
+            "node": "AI Agent1",
+            "type": "ai_memory",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "When chat message received": {
+      "main": [
+        [
+          {
+            "node": "If",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Create Event": {
+      "ai_tool": [
+        [
+          {
+            "node": "AI Agent1",
+            "type": "ai_tool",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Add Data": {
+      "ai_tool": [
+        [
+          {
+            "node": "AI Agent1",
+            "type": "ai_tool",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Google Gemini Chat Model": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "AI Agent1",
+            "type": "ai_languageModel",
+            "index": 1
+          }
+        ]
+      ]
+    },
+    "Groq Chat Model": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "AI Agent1",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Send a message in Gmail": {
+      "ai_tool": [
+        [
+          {
+            "node": "AI Agent1",
+            "type": "ai_tool",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "If": {
+      "main": [
+        [
+          {
+            "node": "Edit Fields2",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "AI Agent1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate"
+  },
+  "versionId": "a403050f-af29-45f7-8671-487ed9281ae4",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "Your Instance ID"
+  },
+  "id": "",
+  "tags": []
+}
