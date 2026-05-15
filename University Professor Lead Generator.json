@@ -1,0 +1,415 @@
+{
+  "name": "Lead Generation",
+  "nodes": [
+    {
+      "parameters": {
+        "formTitle": "University Professor Lead Finder",
+        "formDescription": "Enter filters to search for university professors worldwide",
+        "formFields": {
+          "values": [
+            {
+              "fieldLabel": "Research Field",
+              "placeholder": "e.g. Machine Learning, Quantum Physics, Bioinformatics"
+            },
+            {
+              "fieldLabel": "Country or Region",
+              "placeholder": "e.g. United States, Germany, Japan"
+            },
+            {
+              "fieldLabel": "University Name",
+              "placeholder": "Optional: e.g. MIT, Stanford (leave blank for all)"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "afc98bbc-3b67-4e64-8cef-c22244f14f1b",
+      "name": "On form submission",
+      "type": "n8n-nodes-base.formTrigger",
+      "position": [
+        704,
+        1072
+      ],
+      "webhookId": "76df1285-ad2e-4cdb-91a4-9d26729f9943",
+      "typeVersion": 2.2
+    },
+    {
+      "parameters": {
+        "url": "https://serpapi.com/search",
+        "sendQuery": true,
+        "queryParameters": {
+          "parameters": [
+            {
+              "name": "engine",
+              "value": "google"
+            },
+            {
+              "name": "q",
+              "value": "=site:scholar.google.com \"{{ $json['Research Field'] }}\" \"{{ $json['Country or Region'] }}\" {{ $json['University Name'] ? '\"' + $json['University Name'] + '\"' : '' }} professor"
+            },
+            {
+              "name": "api_key",
+              "value": "YOUR_SERPAPI_KEY"
+            },
+            {
+              "name": "num",
+              "value": "10"
+            },
+            {
+              "name": "start",
+              "value": "10"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "473b3af0-ba38-450b-abcc-09e9323e5bf2",
+      "name": "HTTP Request2",
+      "type": "n8n-nodes-base.httpRequest",
+      "position": [
+        928,
+        1072
+      ],
+      "typeVersion": 4.2
+    },
+    {
+      "parameters": {
+        "jsCode": "// Get all incoming items\nconst allItems = $input.all();\n\nlet formattedLeads = [];\n\nfor (const item of allItems) {\n\n  const data = item.json;\n  const root = Array.isArray(data) ? data[0] : data;\n\n  if (!root?.organic_results) continue;\n\n  for (const result of root.organic_results) {\n\n    // --- Extract Name ---\n    let name = result.title || \"\";\n    // Remove common suffixes like \" - Google Scholar\", \" | MIT\", \" - ResearchGate\"\n    name = name.split(\" - \")[0].split(\" | \")[0].trim();\n\n    // --- Extract University ---\n    let university = \"\";\n    const snippet = result.snippet || \"\";\n    const titleFull = result.title || \"\";\n\n    // Try to find university from title (e.g. \"John Doe | MIT\")\n    if (titleFull.includes(\"|\")) {\n      university = titleFull.split(\"|\")[1]?.trim() || \"\";\n    } else if (titleFull.includes(\" - \")) {\n      const parts = titleFull.split(\" - \");\n      if (parts.length > 1) university = parts[1]?.trim() || \"\";\n    }\n\n    // Fallback: try to pull from snippet\n    if (!university) {\n      const uniMatch = snippet.match(/(?:University of [\\w\\s]+|[\\w\\s]+ University|[\\w\\s]+ Institute of [\\w\\s]+|MIT|Stanford|Carnegie Mellon|Cornell|Princeton|Harvard|Yale|Columbia|Caltech)/i);\n      if (uniMatch) university = uniMatch[0].trim();\n    }\n\n    // --- Extract Email ---\n    let email = \"\";\n    const emailMatch = snippet.match(/verified email at ([\\w.\\-]+)/i);\n    if (emailMatch) email = emailMatch[1];\n\n    // --- Detect Scholar URL ---\n    const link = result.link || \"\";\n    let scholar_url = \"\";\n    if (link.includes(\"scholar.google.com\")) {\n      scholar_url = link;\n    } else if (snippet.toLowerCase().includes(\"scholar\") || titleFull.toLowerCase().includes(\"scholar\")) {\n      scholar_url = link; // best guess\n    }\n\n    // --- Extract Department ---\n    let department = \"\";\n    const deptMatch = snippet.match(/(?:Department|Dept\\.?|School) of [A-Z][\\w\\s]+/i);\n    if (deptMatch) department = deptMatch[0].trim();\n\n    formattedLeads.push({\n      name: name,\n      full_title: result.title || \"\",\n      university: university,\n      department: department,\n      email: email,\n      scholar_url: scholar_url,\n      profile_url: link,\n      snippet: snippet,\n      research_field: $('On form submission').first().json['Research Field'] || \"\",\n      country: $('On form submission').first().json['Country or Region'] || \"\",\n      source: result.source || \"\"\n    });\n  }\n}\n\nreturn formattedLeads.map(lead => ({ json: lead }));"
+      },
+      "id": "a3a1d414-fff3-4a5a-b484-77c947fda1c0",
+      "name": "Code in JavaScript1",
+      "type": "n8n-nodes-base.code",
+      "position": [
+        1152,
+        1072
+      ],
+      "typeVersion": 2
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://api.linkup.so/v1/search",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpBearerAuth",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "bodyParameters": {
+          "parameters": [
+            {
+              "name": "q",
+              "value": "=Visit this Google Scholar profile page: {{ $json.scholar_url }} and extract the following information about the professor:\n- Full name\n- University or institution name\n- Department or faculty\n- Official email address (look for \"Verified email at\" on the page)\n- Research interests\n\nReturn only these facts. No commentary."
+            },
+            {
+              "name": "outputType",
+              "value": "sourcedAnswer"
+            },
+            {
+              "name": "fromDate",
+              "value": "2025-01-01T00:00:00+06:00"
+            },
+            {
+              "name": "depth",
+              "value": "standard"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        768,
+        1392
+      ],
+      "id": "e406b916-dd3d-43f8-b98e-df4c83dedc68",
+      "name": "HTTP Request3",
+      "credentials": {
+        "httpBearerAuth": {
+          "id": "YOUUR_LINKUP_API",
+          "name": "Linkup API"
+        }
+      },
+      "disabled": true
+    },
+    {
+      "parameters": {
+        "operation": "append",
+        "documentId": {
+          "__rl": true,
+          "value": "1Ac-vyax5xcwuO2zuS5wdDZL38WS8B47y-uHT3XTH_rU",
+          "mode": "list",
+          "cachedResultName": "YOUR_SHEET_NAME",
+          "cachedResultUrl": "YOUR_SHEET_URL"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": 432299283,
+          "mode": "list",
+          "cachedResultName": "YOUR_SHEET_NAME",
+          "cachedResultUrl": "YOUR_SHEET_URL"
+        },
+        "columns": {
+          "mappingMode": "autoMapInputData",
+          "value": {},
+          "matchingColumns": [],
+          "schema": [
+            {
+              "id": "name",
+              "displayName": "name",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "university",
+              "displayName": "university",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "job_title",
+              "displayName": "job_title",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "email",
+              "displayName": "email",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "interests",
+              "displayName": "interests",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "cited_by",
+              "displayName": "cited_by",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "h_index",
+              "displayName": "h_index",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "scholar_url",
+              "displayName": "scholar_url",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "profile_url",
+              "displayName": "profile_url",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "research_field",
+              "displayName": "research_field",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "country",
+              "displayName": "country",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        },
+        "options": {}
+      },
+      "id": "bc3f3a95-d1de-4574-b6c1-134f2860e024",
+      "name": "Append row in sheet1",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.7,
+      "position": [
+        1824,
+        1072
+      ],
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "YOUR_SHEET_CREDENTIALS",
+          "name": "Sheets account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "url": "https://serpapi.com/search",
+        "sendQuery": true,
+        "queryParameters": {
+          "parameters": [
+            {
+              "name": "engine",
+              "value": "google_scholar_author"
+            },
+            {
+              "name": "api_key",
+              "value": "YOUR_SERPAPI_KEY"
+            },
+            {
+              "name": "author_id",
+              "value": "={{ $json.scholar_url.match(/user=([^&]+)/)?.[1] }}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "f892c0a6-f982-4a6a-807b-bea0d57ec13d",
+      "name": "HTTP Request",
+      "type": "n8n-nodes-base.httpRequest",
+      "position": [
+        1376,
+        1072
+      ],
+      "typeVersion": 4.2
+    },
+    {
+      "parameters": {
+        "jsCode": "const allItems = $input.all();\nconst results = [];\n\nfor (let i = 0; i < allItems.length; i++) {\n  const item = allItems[i];\n  const data = item.json;\n\n  const profItem = $('Code in JavaScript1').all()[i];\n  const scholar_url = profItem?.json?.scholar_url || \"\";\n  const profile_url = profItem?.json?.profile_url || \"\";\n  const research_field = profItem?.json?.research_field || \"\";\n  const country = profItem?.json?.country || \"\";\n\n  const author = data.author || {};\n\n  const name = author.name || profItem?.json?.name || \"\";\n  const affiliations = author.affiliations || \"\";\n  \n  // Split \"Professor, Santa Fe Institute\" into title and university\n  const affParts = affiliations.split(\",\").map(s => s.trim());\n  const university = affParts.length > 1 ? affParts[1] : affParts[0];\n  const job_title = affParts.length > 1 ? affParts[0] : \"\";\n\n  // Clean email — \"Verified email at santafe.edu\" → \"santafe.edu\"\n  const rawEmail = author.email || \"\";\n  const emailMatch = rawEmail.match(/verified email at ([\\w.\\-]+)/i);\n  const email = emailMatch ? emailMatch[1] : rawEmail;\n\n  // Interests as comma separated string\n  const interests = (author.interests || []).map(i => i.title).join(\", \");\n\n  // Citation stats\n  const citedBy = data.cited_by?.table?.[0]?.citations?.all || \"\";\n  const hIndex = data.cited_by?.table?.[1]?.h_index?.all || \"\";\n\n  results.push({\n    json: {\n      name,\n      university,\n      job_title,\n      email,\n      interests,\n      cited_by: citedBy,\n      h_index: hIndex,\n      scholar_url,\n      profile_url,\n      research_field,\n      country\n    }\n  });\n}\n\nreturn results;"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1600,
+        1072
+      ],
+      "id": "934f3afa-e06e-415e-b84d-8739dc0844cc",
+      "name": "Code in JavaScript"
+    }
+  ],
+  "pinData": {
+    "On form submission": [
+      {
+        "json": {
+          "Research Field": "Artificial Intelligence",
+          "Country or Region": "Australia",
+          "University Name": "",
+          "submittedAt": "2026-05-15T08:35:58.750+06:00",
+          "formMode": "test"
+        }
+      }
+    ]
+  },
+  "connections": {
+    "On form submission": {
+      "main": [
+        [
+          {
+            "node": "HTTP Request2",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "HTTP Request2": {
+      "main": [
+        [
+          {
+            "node": "Code in JavaScript1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Code in JavaScript1": {
+      "main": [
+        [
+          {
+            "node": "HTTP Request",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "HTTP Request3": {
+      "main": [
+        []
+      ]
+    },
+    "HTTP Request": {
+      "main": [
+        [
+          {
+            "node": "Code in JavaScript",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Code in JavaScript": {
+      "main": [
+        [
+          {
+            "node": "Append row in sheet1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate"
+  },
+  "versionId": "b33c1bc7-78c2-47d7-b7c0-72e9a2e87cd4",
+  "meta": {
+    "instanceId": "YOUR_INSTANCE_ID"
+  },
+  "id": "",
+  "tags": []
+}
